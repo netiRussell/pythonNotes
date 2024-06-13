@@ -13,7 +13,7 @@ def loss(y, y_predicted):
 
 # gradient
 def gradient(x, y, y_predicted):
-  return np.dot(2*x, y_predicted - y) / len(x)
+  return np.dot(2*x, y_predicted - y) / len(x) # dot product and calculating the mean
 
 print(f'\nPrediction before training: f(5) = {forward(5):.3f}' )
 
