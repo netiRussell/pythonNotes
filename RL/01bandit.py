@@ -27,9 +27,8 @@ def argmax(q_values):
     for i in range(len(q_values)):
       # if a value in q_values is greater than the highest value update top and reset ties to zero
       if( q_values[i] > top_value ):
-         ties = []
+         ties = [i]
          top_value = q_values[i]
-         ties.append(i)
       
       # if a value is equal to top value add the index to ties
       elif( q_values[i] == top_value ):
