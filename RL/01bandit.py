@@ -72,7 +72,8 @@ class GreedyAgent(main_agent.Agent):
       self.last_action = current_action
       
       return current_action
-   
+
+
 class EpsilonGreedyAgent(main_agent.Agent):
    def agent_step(self, reward, observation):
       """
@@ -118,66 +119,84 @@ class EpsilonGreedyAgent(main_agent.Agent):
       
       return current_action
 
+class EpsilonGreedyAgentConstantStepsize(main_agent.Agent):
+   def agent_step(self, reward, observation):
+      """
+      Takes one step for the agent. It takes in a reward and observation and 
+      returns the action the agent chooses at that time step.
+      
+      Arguments:
+      reward -- float, the reward the agent recieved from the environment after taking the last action.
+      observation -- float, the observed state the agent is in. Do not worry about this as you will not use it
+                           until future lessons
+      Returns:
+      current_action -- int, the action chosen by the agent at the current time step.
+      """
+      
+      ### Useful Class Variables ###
+      # self.q_values : An array with what the agent believes each of the values of the arm are.
+      # self.arm_count : An array with a count of the number of times each arm has been pulled.
+      # self.last_action : An int of the action that the agent took on the previous time step.
+      # self.step_size : A float which is the current step size for the agent.
+      # self.epsilon : The probability an epsilon greedy agent will explore (ranges between 0 and 1)
+      #######################
+      
+      # increment the counter in self.arm_count for the action from the previous time step
+      self.arm_count[self.last_action] += 1
+
+      # Step size is constant
+
+      # update self.q_values for the action from the previous time step
+      self.q_values[self.last_action] = self.q_values[self.last_action] + self.step_size*(reward - self.q_values[self.last_action])
+      
+      
+      # Selecting an action using epsilon greedy
+      # Randomly choose a number between 0 and 1 and see if it's less than self.epsilon
+      if( np.random.random() < self.epsilon ):
+         # If it is, set current_action to a random action (explore).
+         current_action = np.random.randint(0, len(self.q_values))
+      else:
+         # otherwise choose current_action greedily as you did above (exploit).
+         current_action = argmax( self.q_values )
+      
+      
+      self.last_action = current_action
+      
+      return current_action
+   
+
+env = ten_arm_env.Environment
+env_info = {}
+
 # ---------------
 # Discussion Cell
 # ---------------
-
-# Plot Epsilon greedy results and greedy results
-
-num_runs = 200                    # The number of times we run the experiment
-num_steps = 1000                  # The number of pulls of each arm the agent takes
-env = ten_arm_env.Environment     # We set what environment we want to use to test
-agent = GreedyAgent               # We choose what agent we want to use
-agent_info = {"num_actions": 10}  # We pass the agent the information it needs. Here how many arms there are.
-env_info = {}                     # We pass the environment the information it needs. In this case nothing.
-
-rewards = np.zeros((num_runs, num_steps))
-average_best = 0
-for run in tqdm(range(num_runs)):           # tqdm is what creates the progress bar below
-    np.random.seed(run)
-    
-    rl_glue = RLGlue(env, agent)          # Creates a new RLGlue experiment with the env and agent we chose above
-    rl_glue.rl_init(agent_info, env_info) # We pass RLGlue what it needs to initialize the agent and environment
-    rl_glue.rl_start()                    # We start the experiment
-
-    average_best += np.max(rl_glue.environment.arms)
-    
-    for i in range(num_steps):
-        reward, _, action, _ = rl_glue.rl_step() # The environment and agent take a step and return
-                                                 # the reward, and action taken.
-        rewards[run, i] = reward
-
-greedy_scores = np.mean(rewards, axis=0)
-
-num_runs = 200
-num_steps = 1000
 epsilon = 0.1
-agent = EpsilonGreedyAgent
-env = ten_arm_env.Environment
-agent_info = {"num_actions": 10, "epsilon": epsilon}
-env_info = {}
-all_rewards = np.zeros((num_runs, num_steps))
+num_steps = 2000
+num_runs = 500
+step_size = 0.1
 
-for run in tqdm(range(num_runs)):
-    np.random.seed(run)
-    
-    rl_glue = RLGlue(env, agent)
-    rl_glue.rl_init(agent_info, env_info)
-    rl_glue.rl_start()
-
-    for i in range(num_steps):
-        reward, _, action, _ = rl_glue.rl_step() # The environment and agent take a step and return
-                                                 # the reward, and action taken.
-        all_rewards[run, i] = reward
-
-# take the mean over runs
-scores = np.mean(all_rewards, axis=0)
 plt.figure(figsize=(15, 5), dpi= 80, facecolor='w', edgecolor='k')
 plt.plot([1.55 for _ in range(num_steps)], linestyle="--")
-plt.plot(greedy_scores)
-plt.title("Average Reward of Greedy Agent vs. E-Greedy Agent")
-plt.plot(scores)
-plt.legend(("Best Possible", "Greedy", "Epsilon: 0.1"))
+
+for agent in [EpsilonGreedyAgent, EpsilonGreedyAgentConstantStepsize]:
+    rewards = np.zeros((num_runs, num_steps))
+    for run in tqdm(range(num_runs)):
+        agent_info = {"num_actions": 10, "epsilon": epsilon, "step_size": step_size}
+        np.random.seed(run)
+        
+        rl_glue = RLGlue(env, agent)
+        rl_glue.rl_init(agent_info, env_info)
+        rl_glue.rl_start()
+
+        for i in range(num_steps):
+            reward, state, action, is_terminal = rl_glue.rl_step()
+            rewards[run, i] = reward
+            if i == 1000:
+                rl_glue.environment.arms = np.random.randn(10)
+        
+    plt.plot(np.mean(rewards, axis=0))
+plt.legend(["Best Possible", "1/N(A)", "0.1"])
 plt.xlabel("Steps")
 plt.ylabel("Average reward")
 plt.show()
