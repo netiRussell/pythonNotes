@@ -37,30 +37,75 @@ def argmax(q_values):
     # return a random selection from ties.   
     return np.random.choice(ties)
 
-# -----------
-# Tested Cell
-# -----------
-# The contents of the cell will be tested by the autograder.
-# If they do not pass here, they will not pass there.
+class GreedyAgent(main_agent.Agent):
+   def agent_step(self, reward, observation=None):
+      """
+      Takes one step for the agent. It takes in a reward and observation and 
+      returns the action the agent chooses at that time step.
+      
+      Arguments:
+      reward -- float, the reward the agent recieved from the environment after taking the last action.
+      observation -- float, the observed state the agent is in
 
-test_array = [0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
-assert argmax(test_array) == 8, "Check your argmax implementation returns the index of the largest value"
+      Returns:
+      current_action -- int, the action chosen by the agent at the current time step.
+      """
+      ### Useful Class Variables ###
+      # self.q_values : An array with what the agent believes each of the values of the arm are.
+      # self.arm_count : An array with a count of the number of times each arm has been pulled.
+      # self.last_action : The action that the agent took on the previous time step
+      #######################
+      
+      # increment the counter in self.arm_count for the action from the previous time step
+      self.arm_count[self.last_action] += 1
 
-# set random seed so results are deterministic
-np.random.seed(0)
-test_array = [1, 0, 0, 1]
+      # update the step size using self.arm_count
+      stepSize = 1.0 / self.arm_count[self.last_action]
 
-counts = [0, 0, 0, 0]
-for _ in range(100):
-    a = argmax(test_array)
-    counts[a] += 1
+      # update self.q_values for the action from the previous time step
+      self.q_values[self.last_action] = self.q_values[self.last_action] + stepSize*(reward - self.q_values[self.last_action])
 
-# make sure argmax does not always choose first entry
-assert counts[0] != 100, "Make sure your argmax implementation randomly choooses among the largest values."
+      
+      
+      # current action
+      current_action = argmax( self.q_values )
+      self.last_action = current_action
+      
+      return current_action
+   
+# ---------------
+# Discussion Cell
+# ---------------
 
-# make sure argmax does not always choose last entry
-assert counts[3] != 100, "Make sure your argmax implementation randomly choooses among the largest values."
+num_runs = 200                    # The number of times we run the experiment
+num_steps = 1000                  # The number of pulls of each arm the agent takes
+env = ten_arm_env.Environment     # We set what environment we want to use to test
+agent = GreedyAgent               # We choose what agent we want to use
+agent_info = {"num_actions": 10}  # We pass the agent the information it needs. Here how many arms there are.
+env_info = {}                     # We pass the environment the information it needs. In this case nothing.
 
-# make sure the random number generator is called exactly once whenver `argmax` is called
-expected = [44, 0, 0, 56] # <-- notice not perfectly uniform due to randomness
-assert counts == expected
+rewards = np.zeros((num_runs, num_steps))
+average_best = 0
+for run in tqdm(range(num_runs)):           # tqdm is what creates the progress bar below
+    np.random.seed(run)
+    
+    rl_glue = RLGlue(env, agent)          # Creates a new RLGlue experiment with the env and agent we chose above
+    rl_glue.rl_init(agent_info, env_info) # We pass RLGlue what it needs to initialize the agent and environment
+    rl_glue.rl_start()                    # We start the experiment
+
+    average_best += np.max(rl_glue.environment.arms)
+    
+    for i in range(num_steps):
+        reward, _, action, _ = rl_glue.rl_step() # The environment and agent take a step and return
+                                                 # the reward, and action taken.
+        rewards[run, i] = reward
+
+greedy_scores = np.mean(rewards, axis=0)
+plt.figure(figsize=(15, 5), dpi= 80, facecolor='w', edgecolor='k')
+plt.plot([average_best / num_runs for _ in range(num_steps)], linestyle="--")
+plt.plot(greedy_scores)
+plt.legend(["Best Possible", "Greedy"])
+plt.title("Average Reward of Greedy Agent")
+plt.xlabel("Steps")
+plt.ylabel("Average reward")
+plt.show()
