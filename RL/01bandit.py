@@ -67,15 +67,62 @@ class GreedyAgent(main_agent.Agent):
 
       
       
-      # current action
+      # Selecting an action
       current_action = argmax( self.q_values )
       self.last_action = current_action
       
       return current_action
    
+class EpsilonGreedyAgent(main_agent.Agent):
+   def agent_step(self, reward, observation):
+      """
+      Takes one step for the agent. It takes in a reward and observation and 
+      returns the action the agent chooses at that time step.
+      
+      Arguments:
+      reward -- float, the reward the agent recieved from the environment after taking the last action.
+      observation -- float, the observed state the agent is in. Do not worry about this as you will not use it
+                           until future lessons
+      Returns:
+      current_action -- int, the action chosen by the agent at the current time step.
+      """
+      
+      ### Useful Class Variables ###
+      # self.q_values : An array with what the agent believes each of the values of the arm are.
+      # self.arm_count : An array with a count of the number of times each arm has been pulled.
+      # self.last_action : The action that the agent took on the previous time step
+      # self.epsilon : The probability an epsilon greedy agent will explore (ranges between 0 and 1)
+      #######################
+      
+      # increment the counter in self.arm_count for the action from the previous time step
+      self.arm_count[self.last_action] += 1
+
+      # update the step size using self.arm_count
+      stepSize = 1.0 / self.arm_count[self.last_action]
+
+      # update self.q_values for the action from the previous time step
+      self.q_values[self.last_action] = self.q_values[self.last_action] + stepSize*(reward - self.q_values[self.last_action])
+      
+      
+      # Selecting an action using epsilon greedy
+      # Randomly choose a number between 0 and 1 and see if it's less than self.epsilon
+      if( np.random.random() < self.epsilon ):
+         # If it is, set current_action to a random action (explore).
+         current_action = np.random.randint(0, len(self.q_values))
+      else:
+         # otherwise choose current_action greedily as you did above (exploit).
+         current_action = argmax( self.q_values )
+      
+      
+      self.last_action = current_action
+      
+      return current_action
+
 # ---------------
 # Discussion Cell
 # ---------------
+
+# Plot Epsilon greedy results and greedy results
 
 num_runs = 200                    # The number of times we run the experiment
 num_steps = 1000                  # The number of pulls of each arm the agent takes
@@ -101,11 +148,36 @@ for run in tqdm(range(num_runs)):           # tqdm is what creates the progress 
         rewards[run, i] = reward
 
 greedy_scores = np.mean(rewards, axis=0)
+
+num_runs = 200
+num_steps = 1000
+epsilon = 0.1
+agent = EpsilonGreedyAgent
+env = ten_arm_env.Environment
+agent_info = {"num_actions": 10, "epsilon": epsilon}
+env_info = {}
+all_rewards = np.zeros((num_runs, num_steps))
+
+for run in tqdm(range(num_runs)):
+    np.random.seed(run)
+    
+    rl_glue = RLGlue(env, agent)
+    rl_glue.rl_init(agent_info, env_info)
+    rl_glue.rl_start()
+
+    for i in range(num_steps):
+        reward, _, action, _ = rl_glue.rl_step() # The environment and agent take a step and return
+                                                 # the reward, and action taken.
+        all_rewards[run, i] = reward
+
+# take the mean over runs
+scores = np.mean(all_rewards, axis=0)
 plt.figure(figsize=(15, 5), dpi= 80, facecolor='w', edgecolor='k')
-plt.plot([average_best / num_runs for _ in range(num_steps)], linestyle="--")
+plt.plot([1.55 for _ in range(num_steps)], linestyle="--")
 plt.plot(greedy_scores)
-plt.legend(["Best Possible", "Greedy"])
-plt.title("Average Reward of Greedy Agent")
+plt.title("Average Reward of Greedy Agent vs. E-Greedy Agent")
+plt.plot(scores)
+plt.legend(("Best Possible", "Greedy", "Epsilon: 0.1"))
 plt.xlabel("Steps")
 plt.ylabel("Average reward")
 plt.show()
