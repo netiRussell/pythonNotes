@@ -86,7 +86,7 @@ with torch.no_grad():
   
     _, prediction = torch.max(output, 1) # returns values, index
     n_samples += labels.shape[0]
-    n_correct += (prediction == labels).sum().item()
+    n_correct += (prediction == labels).sum().item() # sums up all correct cases and converts the resulted tensor into regular int
   
   acc = 100 * n_correct / n_samples
   print(f'Accuracy = {acc:.4f}')
