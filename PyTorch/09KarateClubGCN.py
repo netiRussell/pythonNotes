@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 
 #  Load Zachary's karate club network
 dataset = KarateClub()
+print(KarateClub().__dir__)
 print(f'Number of features: {dataset.num_features}')
 print(f'Number of classes: {dataset.num_classes}')
 
@@ -51,7 +52,6 @@ class GCN(torch.nn.Module):
       h = self.conv2(h, edge_index)
       h = h.tanh()  # Final GNN embedding space.
       out = self.classifier(h)# Apply a final (linear) classifier.
-
       return out, h
 
 model = GCN()
