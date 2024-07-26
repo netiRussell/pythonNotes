@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from dataset import FindShortPathDataset
 
 # TODO: do citation dataset first
+
 # TODO: use train loader and batches
 # TODO: 20% for testing
 # TODO: no fixed amount of steps
@@ -75,6 +76,7 @@ def train(data):
     optimizer.zero_grad()  # Clear gradients.
     out, h = model(data.x, data.edge_index)  # Perform a single forward pass.
     loss = criterion(out, data.y)  # Compute the loss solely based on the training nodes.
+    # TODO: donn't apply backprop until 64 rows of data are processed to calculate the loss (Mini-batch)
     loss.backward()  # Derive gradients.
     optimizer.step()  # Update parameters based on gradients.
     return loss, h
