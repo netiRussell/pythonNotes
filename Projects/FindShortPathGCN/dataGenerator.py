@@ -81,16 +81,14 @@ def generate_dataset(n, num_nodes):
         
         # Find optimal path --------------------------------------------------
         # TODO: edge_index must be dynamically initialized in the stages 2 and 3
-        edge_index = torch.tensor([
-                                [0, 1, 0, 7, 1, 4, 7, 4, 1, 2, 4, 5, 7, 8, 4, 5, 5, 10, 2, 3, 3, 6, 6, 2, 8, 10, 6, 10, 9, 3],
-                                [1, 0, 7, 0, 4, 1, 4, 7, 2, 1, 5, 4, 8, 7, 5, 4, 10, 5, 3, 2, 6, 3, 2, 6, 10, 8, 10, 6, 3, 9] 
-                                ], dtype=torch.long)
+        edge_index = [[0, 1, 0, 7, 1, 4, 7, 4, 1, 2, 4, 5, 7, 8, 4, 5, 5, 10, 2, 3, 3, 6, 6, 2, 8, 10, 6, 10, 9, 3],
+                      [1, 0, 7, 0, 4, 1, 4, 7, 2, 1, 5, 4, 8, 7, 5, 4, 10, 5, 3, 2, 6, 3, 2, 6, 10, 8, 10, 6, 3, 9]]
 
         # List to store the graph as an adjacency list
         graph = [[] for _ in range(num_nodes)]
 
         for i, node in enumerate(edge_index[0]):
-            graph[node.item()].append(edge_index[1][i].item())
+            graph[node].append(edge_index[1][i])
 
         path = get_shortest_distance(graph, source, destination, num_nodes)
 
@@ -116,4 +114,4 @@ dataset = generate_dataset(10000, num_nodes)
 df = pd.DataFrame(dataset, columns=["Edge index", "X", "Y"])
 
 # Write the DataFrame to an CSV file
-df.to_csv("data.csv", index=False)
+df.to_csv("./data/raw/data.csv", index=False)
