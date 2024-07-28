@@ -1,9 +1,8 @@
-import os
 import torch
+from math import ceil
+from torch_geometric.loader import DataLoader
 from torch.nn import Linear
 from torch_geometric.nn import GCNConv
-from torch_geometric.data import Data
-from sklearn.manifold import TSNE
 from dataset import FindShortPathDataset
 from visualization import visualize
 
@@ -15,8 +14,23 @@ from visualization import visualize
 
 # TODO 2: Load the data using dataLoader or smth like that
 
-# Custom Data setup
+# Hyper parameters and Data setup
 dataset = FindShortPathDataset(root="./data")
 
+n_epoch = 2
+total_samples = len(dataset)
+batch_size = 20
+n_iterations = ceil(total_samples/batch_size)
+print(f"Samples = {total_samples}, Iterations = {n_iterations}")
+
+dataLoader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True)
+dataIter = iter(dataLoader)
+
+# data = next(dataiter)
+# print(data[0].x, "\n", data[0].y)
+
 # Get info and visualization
-visualize(dataset, True)
+visualize(dataset, False)
+
+# Training loop
+

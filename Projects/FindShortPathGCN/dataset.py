@@ -15,7 +15,8 @@ class FindShortPathDataset(Dataset):
 
   @property
   def processed_file_names(self):
-      return "none.pt"
+      self.df = pd.read_csv(self.raw_paths[0])
+      return ['data_{}.pt'.format(i) for i in range(len(self.df)) ]
 
   def download(self):
       pass
