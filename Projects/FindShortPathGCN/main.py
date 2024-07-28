@@ -13,7 +13,6 @@ from visualization import visualize
 # TODO: 10'000 dataset
 
 
-# TODO 1: RESOLVE - /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/torch_geometric/data/dataset.py:169: UserWarning: Found floating-point labels while calling `dataset.num_classes`. Returning the number of unique elements. Please make sure that this is expected before proceeding.
 # TODO 2: Load the data using dataLoader or smth like that
 
 # Custom Data setup

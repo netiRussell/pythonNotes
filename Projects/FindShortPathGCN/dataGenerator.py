@@ -91,8 +91,6 @@ def generate_dataset(n, num_nodes):
             graph[node].append(edge_index[1][i])
 
         path = get_shortest_distance(graph, source, destination, num_nodes)
-
-        # TODO 3: Initialize Y
         
         # Generating X, and Y ----------------------------------------------------
         # X = nx1 size list of values of each node
@@ -102,7 +100,11 @@ def generate_dataset(n, num_nodes):
 
         # Y = nodes to go to to reach destination. Minimum size: 1
         # path is reversed to follow s->d route
-        Y = path[::-1]
+        # TODO: make Y be dynamic, so that Y = path[::-1]
+        Y = [[-1], [-1], [-1], [-1], [-1], [-1], [-1], [-1], [-1], [-1], [-1]]
+        path = path[::-1]
+        for i in range(len(path)):
+            Y[i][0]= path[i]
         
         dataset.append([edge_index, X, Y])
     return dataset

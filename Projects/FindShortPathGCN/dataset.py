@@ -32,7 +32,7 @@ class FindShortPathDataset(Dataset):
     for index, row in self.df.iterrows():
         # Parameters for a dataset
         X = torch.tensor(ast.literal_eval(row['X']), dtype=torch.float)
-        y = torch.tensor(ast.literal_eval(row['Y']), dtype=torch.float)
+        y = torch.tensor(ast.literal_eval(row['Y']), dtype=torch.int32)
         edge_index = torch.tensor(ast.literal_eval(row['Edge index']), dtype=torch.float)
         
         # TODO: make sure num_nodes is dynamic in later data stages
@@ -51,11 +51,11 @@ class FindShortPathDataset(Dataset):
 # dataset = set of generated data.
 # When dataset[some index] is accesed, self.get function called
 # This function retrieves corresponding file from the data folder
-dataset = FindShortPathDataset(root="./data")
+# dataset = FindShortPathDataset(root="./data")
 
-print(dataset[0].x)
-print(dataset[0].y)
-print(dataset[0].edge_index.t())
+# print(dataset[0].x)
+# print(dataset[0].y)
+# print(dataset[0].edge_index.t())
 
 # df = pd.read_csv("./data/raw/data.csv")
 # df = df.reset_index()
