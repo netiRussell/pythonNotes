@@ -15,8 +15,9 @@ class FindShortPathDataset(Dataset):
 
   @property
   def processed_file_names(self):
-      self.df = pd.read_csv(self.raw_paths[0])
-      return ['data_{}.pt'.format(i) for i in range(len(self.df)) ]
+    self.df = pd.read_csv(self.raw_paths[0])
+    return ['data_{}.pt'.format(i) for i in range(len(self.df)) ]
+    #return 'none.pt'
 
   def download(self):
       pass
@@ -32,9 +33,9 @@ class FindShortPathDataset(Dataset):
     # For each row, create data and increment idx
     for index, row in self.df.iterrows():
         # Parameters for a dataset
-        X = torch.tensor(ast.literal_eval(row['X']), dtype=torch.float)
-        y = torch.tensor(ast.literal_eval(row['Y']), dtype=torch.int32)
-        edge_index = torch.tensor(ast.literal_eval(row['Edge index']), dtype=torch.float)
+        X = torch.tensor(ast.literal_eval(row['X']), dtype=torch.float, requires_grad=True)
+        y = torch.tensor(ast.literal_eval(row['Y']), dtype=torch.float)
+        edge_index = torch.tensor(ast.literal_eval(row['Edge index']), dtype=torch.long)
         
         # TODO: make sure num_nodes is dynamic in later data stages
         data = Data(x=X, edge_index=edge_index, y=y, num_nodes=11)
