@@ -64,12 +64,12 @@ class Network(torch.nn.Module):
     self.classifier = Linear(dataset.num_classes, 1)
 
   def forward(self, x, edge_index):
-    # TODO: add non-linearity, consider adding linear layer as a final layer-classifier
+    # TODO: Different activation functions
     out = self.conv1(x, edge_index)
     out = torch.tanh(self.conv2(out, edge_index))
-    out = torch.tanh(self.conv3(out, edge_index))
-    out = torch.tanh(self.conv4(out, edge_index))
-    out = torch.softmax(self.classifier(out), 1)
+    out = torch.nn.LeakyReLU(self.conv3(out, edge_index))
+    out = torch.nn.LeakyReLU(self.conv4(out, edge_index))
+    out = torch.nn.ELU(self.classifier(out))
     return out
 
 model = Network(n_hidden_channels=3)
@@ -87,10 +87,9 @@ for epoch in range(n_epochs):
   for cur_batch_index, batch in enumerate(trainLoader):
     # One batch
     optimizer.zero_grad()
-
-    for i in range(batch_size):
-      # One sample
-      loss = trainSample(sample=batch[i], criterion=criterion)
+    out = model(batch.x, batch.edge_index)
+    loss = criterion(out, batch.y)
+    loss.backward()
 
     optimizer.step()  # Update parameters based on gradients.
 
