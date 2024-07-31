@@ -8,10 +8,7 @@ from dataset import FindShortPathDataset
 from visualization import visualize
 import matplotlib.pyplot as plt
 
-# TODO: use train loader and mini-batches
-# TODO: 20% for testing
-# TODO: no fixed amount of steps
-# TODO: 10'000 dataset
+# TODO: Try some simple dataset to make sure the structure works
 
 def split_data(dataset, val_ratio):
   train_size = int(total_samples * (1.0 - val_ratio))
@@ -23,13 +20,6 @@ def split_data(dataset, val_ratio):
   validationLoader = DataLoader(validation_dataset, batch_size=100, shuffle=False)
 
   return trainLoader, validationLoader
-
-def trainSample(sample, criterion):
-  out = model(sample.x, sample.edge_index)
-  loss = criterion(out, sample.y)
-  loss.backward()
-
-  return loss
 
 
 """
@@ -55,37 +45,39 @@ visualize(dataset, False)
 
 # -- Model --
 class Network(torch.nn.Module):
+  # Try hidden layers > 1 at the last layer
+
   def __init__(self, n_hidden_channels):
     super(Network, self).__init__()
     torch.manual_seed(1234567)
     self.conv1 = GCNConv(dataset.num_features, n_hidden_channels)
     self.conv2 = GCNConv(n_hidden_channels, n_hidden_channels)
-    self.conv3 = GCNConv(n_hidden_channels, 33)
-    self.conv4 = GCNConv(33, 11)
-    self.conv5 = GCNConv(11, 5)
-    self.conv6 = GCNConv(5, 3)
-    self.classifier = Linear(3, 1)
+    self.conv3 = GCNConv(n_hidden_channels, n_hidden_channels)
+    self.conv4 = GCNConv(n_hidden_channels, 11)
+    self.conv5 = GCNConv(11, 11)
+    self.classifier = Linear(11, 1)
     self.elu = ELU(alpha=1.0, inplace=False)
-    self.dropout05 = Dropout(p=0.5)
-    self.dropout02 = Dropout(p=0.2)
 
   def forward(self, x, edge_index):
     out = self.conv1(x, edge_index)
-    out = self.dropout02(out)
+    out = self.elu(out)
+    out = F.dropout(out, p=0.2, training=self.training)
     out = self.conv2(out, edge_index)
     out = self.elu(out)
+    out = F.dropout(out, p=0.5, training=self.training)
     out = self.conv3(out, edge_index)
-    out = self.dropout05(out)
+    out = self.elu(out)
+    out = F.dropout(out, p=0.5, training=self.training)
     out = self.conv4(out, edge_index)
     out = self.elu(out)
+    out = F.dropout(out, p=0.5, training=self.training)
     out = self.conv5(out, edge_index)
     out = self.elu(out)
-    out = self.conv6(out, edge_index)
-    out = self.dropout05(out)
+    out = F.dropout(out, p=0.5, training=self.training)
     out = self.classifier(out)
     return out
 
-model = Network(n_hidden_channels=55)
+model = Network(n_hidden_channels=22)
 print(model)
 
 # -- Training loop --
@@ -101,8 +93,6 @@ model.train()
 X = torch.tensor([[-1], [0], [0], [0], [0], [2], [0], [0], [0], [0], [0]], dtype=torch.float, requires_grad=True)# delete after testing 
 y = torch.tensor([[0], [1], [4], [5], [-1], [-1], [-1], [-1], [-1], [-1], [-1]], dtype=torch.float)# delete after testing 
 edge_index = torch.tensor([[0, 1, 0, 7, 1, 4, 7, 4, 1, 2, 4, 5, 7, 8, 4, 5, 5, 10, 2, 3, 3, 6, 6, 2, 8, 10, 6, 10, 9, 3], [1, 0, 7, 0, 4, 1, 4, 7, 2, 1, 5, 4, 8, 7, 5, 4, 10, 5, 3, 2, 6, 3, 2, 6, 10, 8, 10, 6, 3, 9]], dtype=torch.long)# delete after testing 
-out = model(X, edge_index)# delete after testing 
-print(f'1!!! Result: {out}', "\n", f"Expected result: {y}") # delete after testing 
 
 for epoch in range(n_epochs):
   # One epoch
@@ -122,7 +112,7 @@ for epoch in range(n_epochs):
     
     if cur_batch_index % 100 == 0: # delete after testing 
       out = model(X, edge_index) # delete after testing 
-      print(f'Result: {out}', "\n", f"Expected result: {y}") # delete after testing 
+      print("Result:", "\n", out, "\n", "Expected result:", "\n", y) # delete after testing 
 
 # -- Validation -- 
 # losses = []

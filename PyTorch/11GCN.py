@@ -1,43 +1,86 @@
-from torch_geometric.datasets import Planetoid
 import torch
-import torch.nn.functional as F
+from torch_geometric.datasets import Planetoid
+from torch_geometric.transforms import NormalizeFeatures
 from torch_geometric.nn import GCNConv
+import torch.nn.functional as F
 import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
 
-dataset = Planetoid(root='./data/Cora', name='Cora')
+
+dataset = Planetoid(root='./data/Planetoid', name='Cora', transform=NormalizeFeatures())
+
+print(f'Dataset: {dataset}:')
+print('======================')
+print(f'Number of graphs: {len(dataset)}')
+print(f'Number of features: {dataset.num_features}')
+print(f'Number of classes: {dataset.num_classes}')
+
+data = dataset[0]  # Get the first graph object.
+print(data)
 
 class GCN(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, hidden_channels):
         super().__init__()
-        self.conv1 = GCNConv(dataset.num_node_features, 16)
-        self.conv2 = GCNConv(16, dataset.num_classes)
+        torch.manual_seed(1234567)
+        self.conv1 = GCNConv(dataset.num_features, hidden_channels)
+        self.conv2 = GCNConv(hidden_channels, dataset.num_classes)
 
-    def forward(self, data):
-        x, edge_index = data.x, data.edge_index
-
+    def forward(self, x, edge_index):
         x = self.conv1(x, edge_index)
-        x = F.relu(x)
-        x = F.dropout(x, training=self.training)
+        x = x.relu()
+        x = F.dropout(x, p=0.5, training=self.training)
         x = self.conv2(x, edge_index)
+        return x
 
-        return F.log_softmax(x, dim=1)
+model = GCN(hidden_channels=16)
+print(model)
 
-device = torch.device('cpu')
-model = GCN().to(device)
-data = dataset[0].to(device)
+def visualize(h, color):
+    z = TSNE(n_components=2).fit_transform(h.detach().cpu().numpy())
+
+    plt.figure(figsize=(10,10))
+    plt.xticks([])
+    plt.yticks([])
+
+    plt.scatter(z[:, 0], z[:, 1], s=70, c=color, cmap="Set2")
+    plt.show()
+
+
+model.eval()
+
+out = model(data.x, data.edge_index)
+visualize(out, color=data.y)
+
+
+model = GCN(hidden_channels=16)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
+criterion = torch.nn.CrossEntropyLoss()
+
+def train():
+      model.train()
+      optimizer.zero_grad()
+      out = model(data.x, data.edge_index)
+      loss = criterion(out[data.train_mask], data.y[data.train_mask])
+      loss.backward()
+      optimizer.step()
+      return loss
+
+def test():
+      model.eval()
+      out = model(data.x, data.edge_index)
+      pred = out.argmax(dim=1)
+      test_correct = pred[data.test_mask] == data.y[data.test_mask]
+      test_acc = int(test_correct.sum()) / int(data.test_mask.sum())
+      return test_acc
 
 # Training
 losses = []
-model.train()
-for epoch in range(200):
-    optimizer.zero_grad()
-    out = model(data)
-    loss = F.nll_loss(out[data.train_mask], data.y[data.train_mask])
-    loss.backward()
+for epoch in range(1, 101):
+    loss = train()
+    print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}')
     losses.append(loss.item())
-    optimizer.step()
 
+# -- Visualization of loss curve --
 plt.plot(range(1, len(losses) + 1), losses, marker='o')
 plt.title('Training Loss Curve')
 plt.xlabel('Epoch')
@@ -45,8 +88,10 @@ plt.ylabel('Loss')
 plt.grid(True)
 plt.show()
 
+
+# Evaluation
+test_acc = test()
+print(f'Test Accuracy: {test_acc:.4f}')
 model.eval()
-pred = model(data).argmax(dim=1)
-correct = (pred[data.test_mask] == data.y[data.test_mask]).sum()
-acc = int(correct) / int(data.test_mask.sum())
-print(f'Accuracy: {acc:.4f}')
+out = model(data.x, data.edge_index)
+visualize(out, color=data.y)
