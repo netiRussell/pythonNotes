@@ -75,7 +75,7 @@ def test():
 
 # Training
 losses = []
-for epoch in range(1, 101):
+for epoch in range(1, 201):
     loss = train()
     print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}')
     losses.append(loss.item())

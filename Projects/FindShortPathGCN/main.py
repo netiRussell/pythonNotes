@@ -84,14 +84,15 @@ print(model)
 losses = []
 loss = None
 # TODO: consider using Hamming Loss as a loss function
-criterion = torch.nn.L1Loss()  # Initialize the loss function.
+criterion = torch.nn.L1Loss()  # Initialize the loss function (mean absolute error)
 # TODO: consider some other than Adam optimizer
 optimizer = torch.optim.Adam(params=model.parameters(), lr=0.01)
 
 model.train()
 
 X = torch.tensor([[-1], [0], [0], [0], [0], [2], [0], [0], [0], [0], [0]], dtype=torch.float, requires_grad=True)# delete after testing 
-y = torch.tensor([[0], [1], [4], [5], [-1], [-1], [-1], [-1], [-1], [-1], [-1]], dtype=torch.float)# delete after testing 
+y = torch.tensor([[0], [1], [4], [5], [-1], [-1], [-1], [-1], [-1], [-1], [-1]], dtype=torch.float)# delete after testing
+
 edge_index = torch.tensor([[0, 1, 0, 7, 1, 4, 7, 4, 1, 2, 4, 5, 7, 8, 4, 5, 5, 10, 2, 3, 3, 6, 6, 2, 8, 10, 6, 10, 9, 3], [1, 0, 7, 0, 4, 1, 4, 7, 2, 1, 5, 4, 8, 7, 5, 4, 10, 5, 3, 2, 6, 3, 2, 6, 10, 8, 10, 6, 3, 9]], dtype=torch.long)# delete after testing 
 
 for epoch in range(n_epochs):
