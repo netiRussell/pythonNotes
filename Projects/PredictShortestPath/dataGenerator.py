@@ -72,77 +72,83 @@ if(math.sqrt(num_nodes) % 1):
 
 
 
-def generate_dataset(n, num_nodes):
+def generate_dataset(n, num_nodes, imperfect=False):
     dataset = []
+
+    # Dynamically generating edge_index
+    edge_index = [[], []]
+    n_rows = int(math.sqrt(num_nodes)) # n_rows = num of columns = number of elems per row
+
+    for row in range(n_rows):
+        for elem in range(n_rows):
+            current_elem = elem + row*n_rows
+            # lower neighbor
+            if( current_elem + n_rows < num_nodes ):
+                edge_index[0].append(current_elem)
+                edge_index[1].append(current_elem+n_rows)
+                edge_index[0].append(current_elem+n_rows)
+                edge_index[1].append(current_elem)
+            # right neighbor
+            if( elem + 1 < n_rows ):
+                edge_index[0].append(current_elem)
+                edge_index[1].append(current_elem+1)
+                edge_index[0].append(current_elem+1)
+                edge_index[1].append(current_elem)
+            # left neighbor
+            if( elem - 1 > 0 ):
+                edge_index[0].append(current_elem)
+                edge_index[1].append(current_elem-1)
+                edge_index[0].append(current_elem-1)
+                edge_index[1].append(current_elem)
+            # upper neighbor
+            if( current_elem - n_rows > 0 ):
+                edge_index[0].append(current_elem)
+                edge_index[1].append(current_elem-n_rows)
+                edge_index[0].append(current_elem-n_rows)
+                edge_index[1].append(current_elem)
+
     for _ in range(n):
         # Generating random source and destination nodes ---------------------
         source = random.randint(0, num_nodes-1)
         destination = random.randint(0, num_nodes-1)
         
-        # Find optimal path --------------------------------------------------
+        if(imperfect == False):
+            # Find optimal path --------------------------------------------------
 
-        # Dynamically generating edge_index
-        edge_index = [[], []]
-        n_rows = int(math.sqrt(num_nodes)) # n_rows = num of columns = number of elems per row
+            # List to store the graph as an adjacency list
+            graph = [[] for _ in range(num_nodes)]
 
-        for row in range(n_rows):
-            for elem in range(n_rows):
-                current_elem = elem + row*n_rows
-                # lower neighbor
-                if( current_elem + n_rows < num_nodes ):
-                    edge_index[0].append(current_elem)
-                    edge_index[1].append(current_elem+n_rows)
-                    edge_index[0].append(current_elem+n_rows)
-                    edge_index[1].append(current_elem)
-                # right neighbor
-                if( elem + 1 < n_rows ):
-                    edge_index[0].append(current_elem)
-                    edge_index[1].append(current_elem+1)
-                    edge_index[0].append(current_elem+1)
-                    edge_index[1].append(current_elem)
-                # left neighbor
-                if( elem - 1 > 0 ):
-                    edge_index[0].append(current_elem)
-                    edge_index[1].append(current_elem-1)
-                    edge_index[0].append(current_elem-1)
-                    edge_index[1].append(current_elem)
-                # upper neighbor
-                if( current_elem - n_rows > 0 ):
-                    edge_index[0].append(current_elem)
-                    edge_index[1].append(current_elem-n_rows)
-                    edge_index[0].append(current_elem-n_rows)
-                    edge_index[1].append(current_elem)
+            for i, node in enumerate(edge_index[0]):
+                graph[node].append(edge_index[1][i])
 
-        # List to store the graph as an adjacency list
-        graph = [[] for _ in range(num_nodes)]
-
-        for i, node in enumerate(edge_index[0]):
-            graph[node].append(edge_index[1][i])
-
-        path = get_shortest_distance(graph, source, destination, num_nodes)
+            path = get_shortest_distance(graph, source, destination, num_nodes)
+        else:
+            sys.exit("Not implemented just yet")
         
         # Generating X, and Y ----------------------------------------------------
         # X = nx1 size list of values of each node
-        X = [[0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]]
+        X = [[0]] * num_nodes
         X[source] = [-1]
-        X[destination] = [2]
+        X[destination] = [1]
 
         # Y = nodes to go to to reach destination. Minimum size: 1
         # path is reversed to follow s->d route
-        # TODO: make Y be dynamic, so that Y = path[::-1]
-        Y = [[-1], [-1], [-1], [-1], [-1], [-1], [-1], [-1], [-1], [-1], [-1]]
-        path = path[::-1]
-        for i in range(len(path)):
-            Y[i][0]= path[i]
+        Y = path[::-1]
         
         dataset.append([edge_index, X, Y])
     return dataset
 
 # Generate a dataset
-dataset = generate_dataset(10000, num_nodes)
+imperfect_dataset = True
+dataset = generate_dataset(10000, num_nodes, imperfect=imperfect_dataset)
 
 # Create a DataFrame
 df = pd.DataFrame(dataset, columns=["Edge index", "X", "Y"])
 
-# Write the DataFrame to an CSV file
-df.to_csv("./data/raw/data.csv", index=False)
+
+if( imperfect_dataset == True):
+    # Write the DataFrame to an CSV file
+    df.to_csv("./data/raw/imperfect.csv", index=False)
+else:
+    # Write the DataFrame to an CSV file
+    df.to_csv("./data/raw/perfect.csv", index=False)
