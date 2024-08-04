@@ -6,11 +6,6 @@ from collections import deque
 import sys
 import math
 
-# Data stages (Start and end points are always random):
-    # 1) Static, same structure
-    # 2) Semi-dynamic, structure is dynamic but it is derived from 10x10 grid
-    # 3) Fully dynamic, structure is dynamic and is not limited in size
-
 # Algorithm for finding the optimal path
 def bfs(adjacency_matrix, S, par, dist):
   # Preparing graph by convertin long tesnor into int list 
@@ -85,9 +80,38 @@ def generate_dataset(n, num_nodes):
         destination = random.randint(0, num_nodes-1)
         
         # Find optimal path --------------------------------------------------
-        # TODO: edge_index must be dynamically initialized in the stages 2 and 3
-        edge_index = [[0, 1, 0, 7, 1, 4, 7, 4, 1, 2, 4, 5, 7, 8, 4, 5, 5, 10, 2, 3, 3, 6, 6, 2, 8, 10, 6, 10, 9, 3],
-                      [1, 0, 7, 0, 4, 1, 4, 7, 2, 1, 5, 4, 8, 7, 5, 4, 10, 5, 3, 2, 6, 3, 2, 6, 10, 8, 10, 6, 3, 9]]
+
+        # Dynamically generating edge_index
+        edge_index = [[], []]
+        n_rows = int(math.sqrt(num_nodes)) # n_rows = num of columns = number of elems per row
+
+        for row in range(n_rows):
+            for elem in range(n_rows):
+                current_elem = elem + row*n_rows
+                # lower neighbor
+                if( current_elem + n_rows < num_nodes ):
+                    edge_index[0].append(current_elem)
+                    edge_index[1].append(current_elem+n_rows)
+                    edge_index[0].append(current_elem+n_rows)
+                    edge_index[1].append(current_elem)
+                # right neighbor
+                if( elem + 1 < n_rows ):
+                    edge_index[0].append(current_elem)
+                    edge_index[1].append(current_elem+1)
+                    edge_index[0].append(current_elem+1)
+                    edge_index[1].append(current_elem)
+                # left neighbor
+                if( elem - 1 > 0 ):
+                    edge_index[0].append(current_elem)
+                    edge_index[1].append(current_elem-1)
+                    edge_index[0].append(current_elem-1)
+                    edge_index[1].append(current_elem)
+                # upper neighbor
+                if( current_elem - n_rows > 0 ):
+                    edge_index[0].append(current_elem)
+                    edge_index[1].append(current_elem-n_rows)
+                    edge_index[0].append(current_elem-n_rows)
+                    edge_index[1].append(current_elem)
 
         # List to store the graph as an adjacency list
         graph = [[] for _ in range(num_nodes)]
