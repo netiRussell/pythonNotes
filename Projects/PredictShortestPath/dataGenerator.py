@@ -62,17 +62,10 @@ def get_shortest_distance(adjacency_matrix, S, D, V):
   # Printing path from source to destination
   return path
 
-
-# Global parameters
-# n = random.randint(0,100)
-# n must be = x^2
-num_nodes = 16
-if(math.sqrt(num_nodes) % 1):
-    sys.exit(f"Number of nodes = {num_nodes} can't form a grid layout")
-
-
-
 def generate_dataset(n, num_nodes, imperfect=False):
+    if(math.sqrt(num_nodes) % 1):
+        sys.exit(f"Number of nodes = {num_nodes} can't form a grid layout")
+
     dataset = []
 
     # Dynamically generating edge_index
@@ -138,9 +131,10 @@ def generate_dataset(n, num_nodes, imperfect=False):
         dataset.append([edge_index, X, Y])
     return dataset
 
-# Generate a dataset
+
+# ! Main params - Generate a dataset -----------------------------------------------------------------
 imperfect_dataset = True
-dataset = generate_dataset(10000, num_nodes, imperfect=imperfect_dataset)
+dataset = generate_dataset(10000, num_nodes=16, imperfect=imperfect_dataset)
 
 # Create a DataFrame
 df = pd.DataFrame(dataset, columns=["Edge index", "X", "Y"])
