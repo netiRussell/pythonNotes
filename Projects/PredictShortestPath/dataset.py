@@ -5,13 +5,13 @@ from torch_geometric.data import Dataset, Data
 import pandas as pd
 import ast
 
-class FindShortPathDataset(Dataset):
+class PredictShortestPathDataset(Dataset):
   def __init__(self, root, transform=None, pre_transform=None, pre_filter=None):
       super().__init__(root, transform, pre_transform, pre_filter)
 
   @property
   def raw_file_names(self):
-      return "data.csv"
+      return "perfect.csv"
 
   @property
   def processed_file_names(self):
@@ -37,8 +37,7 @@ class FindShortPathDataset(Dataset):
         y = torch.tensor(ast.literal_eval(row['Y']), dtype=torch.float)
         edge_index = torch.tensor(ast.literal_eval(row['Edge index']), dtype=torch.long)
         
-        # TODO: make sure num_nodes is dynamic in later data stages
-        data = Data(x=X, edge_index=edge_index, y=y, num_nodes=11)
+        data = Data(x=X, edge_index=edge_index, y=y, num_nodes=len(X))
 
         torch.save(data, osp.join(self.processed_dir, f'data_{idx}.pt'))
         idx += 1
@@ -53,13 +52,8 @@ class FindShortPathDataset(Dataset):
 # dataset = set of generated data.
 # When dataset[some index] is accesed, self.get function called
 # This function retrieves corresponding file from the data folder
-# dataset = FindShortPathDataset(root="./data")
+# dataset = PredictShortestPathDataset(root="./data")
 
 # print(dataset[0].x)
 # print(dataset[0].y)
 # print(dataset[0].edge_index.t())
-
-# df = pd.read_csv("./data/raw/data.csv")
-# df = df.reset_index()
-# row = next(df.iterrows())
-# print(row)

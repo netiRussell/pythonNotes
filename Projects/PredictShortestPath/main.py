@@ -5,14 +5,26 @@ import torch.utils.data as data
 import math
 import copy
 from models.Transformer import Transformer
+from visualization import visualize
+from dataset import PredictShortestPathDataset
 
-# TODO: Adapt the dataset.py
-# TODO: Visualize data
+
 # TODO: Split data
 # TODO: Encode graph into passable value
+"""
+multiple layers of GCN, then out = GCN is passed to a transformer to generate a sequence
+"""
 # TODO: Make the transformer work with the graph data
 
-# Hyperparameters
+# -- Data -- 
+dataset = PredictShortestPathDataset(root="./data")
+print(dataset[0])
+
+# -- Get info and visualization --
+visualize(dataset, False)
+
+# -- Hyperparameters --
+batch_size = 25
 src_size = 5000
 target_size = 5000
 d_model = 512
@@ -30,7 +42,7 @@ tgt_data = torch.randint(1, target_size, (64, max_seq_length))  # (batch_size, s
 
 transformer = Transformer(src_size, target_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout)
 
-# Training
+# -- Training --
 # TODO: consider using nn.MSELoss()
 criterion = nn.CrossEntropyLoss(ignore_index=0)
 optimizer = optim.Adam(transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
@@ -46,7 +58,7 @@ transformer.train()
 #     print(f"Epoch: {epoch+1}, Loss: {loss.item()}")
 
 
-# # Evaluation
+# # -- Evaluation --
 # transformer.eval()
 
 # # Generate random sample validation data
