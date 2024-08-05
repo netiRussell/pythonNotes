@@ -4,7 +4,13 @@ import torch.optim as optim
 import torch.utils.data as data
 import math
 import copy
-from model import Transformer
+from models.Transformer import Transformer
+
+# TODO: Adapt the dataset.py
+# TODO: Visualize data
+# TODO: Split data
+# TODO: Encode graph into passable value
+# TODO: Make the transformer work with the graph data
 
 # Hyperparameters
 src_size = 5000
@@ -21,12 +27,11 @@ transformer = Transformer(src_size, target_size, d_model, num_heads, num_layers,
 # Generate random sample data
 src_data = torch.randint(1, src_size, (64, max_seq_length))  # (batch_size, seq_length)
 tgt_data = torch.randint(1, target_size, (64, max_seq_length))  # (batch_size, seq_length)
-print(src_data, "\n\n", src_data.shape)
-
 
 transformer = Transformer(src_size, target_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout)
 
 # Training
+# TODO: consider using nn.MSELoss()
 criterion = nn.CrossEntropyLoss(ignore_index=0)
 optimizer = optim.Adam(transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
 
