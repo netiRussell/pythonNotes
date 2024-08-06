@@ -34,7 +34,7 @@ class PredictShortestPathDataset(Dataset):
     for index, row in self.df.iterrows():
         # Parameters for a dataset
         X = torch.tensor(ast.literal_eval(row['X']), dtype=torch.float, requires_grad=True)
-        y = torch.tensor(ast.literal_eval(row['Y']), dtype=torch.float)
+        y = torch.tensor(ast.literal_eval(row['Y']), dtype=torch.float).unsqueeze(1)
         edge_index = torch.tensor(ast.literal_eval(row['Edge index']), dtype=torch.long)
         
         data = Data(x=X, edge_index=edge_index, y=y, num_nodes=len(X))

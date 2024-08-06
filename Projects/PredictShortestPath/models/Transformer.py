@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
-import torch.utils.data as data
+from torch_geometric.nn import GCNConv
+import torch.nn.functional as F
 import math
-import copy
 
 class MultiHeadAttention(nn.Module):
   def __init__(self, d_model, num_heads):
@@ -34,6 +33,7 @@ class MultiHeadAttention(nn.Module):
     attn_probs = torch.softmax(attn_scores, dim=-1)
     
     # Multiply by values to obtain the final output
+    print(attn_probs.shape, "\n\n", V.shape, "\n\n\n\n",)
     output = torch.matmul(attn_probs, V)
     return output
       
@@ -83,14 +83,14 @@ class PositionalEncoding(nn.Module):
     pe = torch.zeros(max_seq_length, d_model)
     position = torch.arange(0, max_seq_length, dtype=torch.float).unsqueeze(1)
     div_term = torch.exp(torch.arange(0, d_model, 2).float() * -(math.log(10000.0) / d_model))
-    
+
     pe[:, 0::2] = torch.sin(position * div_term)
     pe[:, 1::2] = torch.cos(position * div_term)
     
     self.register_buffer('pe', pe.unsqueeze(0))
       
   def forward(self, x):
-    return x + self.pe[:, :x.size(1)]
+    return x + self.pe[:x.size(0), :x.size(1)]
 
 
 # Encoder
@@ -135,10 +135,13 @@ class DecoderLayer(nn.Module):
 
 # Transformer
 class Transformer(nn.Module):
-  def __init__(self, src_size, target_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout):
+  def __init__(self, src_size, target_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout, num_nodes):
     super(Transformer, self).__init__()
-    self.encoder_embedding = nn.Embedding(src_size, d_model)
-    self.decoder_embedding = nn.Embedding(target_size, d_model)
+    self.gcn1 = GCNConv(src_size, d_model)
+    self.gcn2 = GCNConv(d_model, src_size)
+
+    self.encoder_embedding = nn.Embedding(d_model, d_model)
+    self.decoder_embedding = nn.Embedding(num_nodes, d_model)
     self.positional_encoding = PositionalEncoding(d_model, max_seq_length)
 
     self.encoder_layers = nn.ModuleList([EncoderLayer(d_model, num_heads, d_ff, dropout) for _ in range(num_layers)])
@@ -148,17 +151,21 @@ class Transformer(nn.Module):
     self.dropout = nn.Dropout(dropout)
 
   def generate_mask(self, src, tgt):
-    src_mask = (src != 0).unsqueeze(1).unsqueeze(2)
-    tgt_mask = (tgt != 0).unsqueeze(1).unsqueeze(3)
-    seq_length = tgt.size(1)
+    src_mask = (src != 0)
+    tgt_mask = (tgt != 0)
+    seq_length = tgt.size(0)
     nopeak_mask = (1 - torch.triu(torch.ones(1, seq_length, seq_length), diagonal=1)).bool()
     tgt_mask = tgt_mask & nopeak_mask
     return src_mask, tgt_mask
 
-  def forward(self, src, tgt):
+  def forward(self, src, tgt, adj):
+    # Apply GCN before Transformer
+    src = F.relu(self.gcn1(src, adj))
+    src = F.relu(self.gcn2(src, adj))
+
     src_mask, tgt_mask = self.generate_mask(src, tgt)
-    src_embedded = self.dropout(self.positional_encoding(self.encoder_embedding(src)))
-    tgt_embedded = self.dropout(self.positional_encoding(self.decoder_embedding(tgt)))
+    src_embedded = self.dropout(self.positional_encoding(self.encoder_embedding(src.int())))
+    tgt_embedded = self.dropout(self.positional_encoding(self.decoder_embedding(tgt.int())))
 
     enc_output = src_embedded
     for enc_layer in self.encoder_layers:
@@ -170,3 +177,5 @@ class Transformer(nn.Module):
 
     output = self.fc(dec_output)
     return output
+  
+# TODO: consider applying softmax at the end
