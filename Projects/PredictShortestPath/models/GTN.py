@@ -3,6 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
+# source: https://github.com/linhthi/ts/blob/master/models/GTN/GTN.py
+# more: https://github.com/linhthi/ts/blob/master/main_gtn.py#L96
 
 
 class GTN(nn.Module):

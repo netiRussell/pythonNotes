@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils.data import BatchSampler
 from torch_geometric.loader import DataLoader
 from math import ceil
 from models.Transformer import Transformer
@@ -37,17 +38,27 @@ visualize(dataset, False)
 
 # -- Hyperparameters --
 n_epochs = 1
-src_size = 1 # num of features for input
-target_size = 1 # num of features for output
 num_nodes = 16 # TODO: make it dynamic
+# TODO: try num_nodes as the size
+src_size = 8 # num of features for input
+target_size = 3 # num of features for output
 d_model = 64
 num_heads = 8
 num_layers = 6
 d_ff = 256
-max_seq_length = 100
+max_seq_length = num_nodes
 dropout = 0.1
 
 transformer = Transformer(src_size, target_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout, num_nodes)
+
+# size must be >= than 2nd arg
+# target_size doesn't have to be equaled to src_size
+# different from src size of target is okay
+# TODO: figure out what src_size and target_size should be equal to
+src_data = torch.randint(1, 7, (1, max_seq_length))  # (batch_size, seq_length)
+print(src_data)
+tgt_data = torch.randint(1, 3, (1, max_seq_length-5))  # (batch_size, seq_length)
+print(tgt_data)
 
 # -- Training --
 # TODO: consider using nn.MSELoss()
@@ -57,28 +68,39 @@ optimizer = optim.Adam(transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), e
 transformer.train()
 losses = []
 
-for epoch in range(n_epochs):
-  # One epoch
-  for cur_batch_index, batch in enumerate(trainLoader):
-    # One batch
-    optimizer.zero_grad()
+for epoch in range(0):
+    # One epoch
+    for cur_batch_index, batch in enumerate(trainLoader):
+      # One batch
 
-    # *Prev. logic:
-    # *output = transformer(batch.x, batch.y, adj=batch.edge_index)
-    # *loss = criterion(output.contiguous().view(-1, target_size), batch.y)
-    # *loss.backward()
+      # batch.x = batch.x.reshape(-1, 16)
+      
+      # Converting batch into suitable data
+      # x = torch.tensor([])
+      # y = torch.tensor([])
+      # edge_index = torch.tensor([])
+      # for i in range(batch_size):
+      #   x = torch.cat((x, batch[i].x), 1)
+      #   y = torch.cat((y, batch[i].y), 1)
+      #   edge_index = torch.cat((edge_index, batch[i].edge_index), 1)
+      """
+      batch.x must be = [ [[1],[2],[3]], [[1],[2],[3]], [[1],[2],[3]] ] instead of [ [1],[2],[3], [1],[2],[3], [1],[2],[3] ]
+      """
 
-    for i in range(len(batch)):
-      # One sample
-      output = transformer(batch[i].x, batch[i].y, adj=batch[i].edge_index)
-      loss = criterion(output.contiguous().view(-1, target_size), batch[i].y)
+      optimizer.zero_grad()
+
+      for i in range(len(batch)):
+        print("ODIN\n\n")
+        # One sample
+        x = torch.swapaxes(batch[i].x, 1, 0)
+        y = torch.swapaxes(batch[i].y, 1, 0)
+
+      output = transformer(src_data, tgt_data[:, :-1])
+      loss = criterion(output.contiguous().view(-1, target_size), tgt_data[:, 1:].contiguous().view(-1))
       loss.backward()
-
-    optimizer.step()  # Update parameters based on gradients.
-
-    if cur_batch_index % 25 == 0:
-      losses.append(loss.item())
-      print(f"Batch {cur_batch_index}, last loss = {losses[-1]:.4f}")
+      
+      optimizer.step()
+      print(f"Epoch: {epoch+1}, Loss: {loss.item()}")
 
 
 # # -- Evaluation --
