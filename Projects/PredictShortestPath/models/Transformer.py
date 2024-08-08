@@ -1,9 +1,16 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
-import torch.utils.data as data
+from torch_geometric.nn import GCNConv
+import torch.nn.functional as F
 import math
-import copy
+
+class CustomSigmoid(nn.Module):
+  def __init__(self):
+    super(CustomSigmoid, self).__init__()
+
+  def forward(self, x, beta=1):
+    return (1 / ( (len(x)**2)**(-x) ) + 1)
+  
 
 class MultiHeadAttention(nn.Module):
   def __init__(self, d_model, num_heads):
@@ -135,8 +142,12 @@ class DecoderLayer(nn.Module):
 
 # Transformer
 class Transformer(nn.Module):
-  def __init__(self, src_size, target_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout, num_nodes):
+  def __init__(self, src_size, target_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout):
     super(Transformer, self).__init__()
+    self.gcn1 = GCNConv(1, target_size)
+    self.gcn2 = GCNConv(target_size, 1)
+    self.sigmoid = CustomSigmoid()
+
     self.encoder_embedding = nn.Embedding(src_size, d_model)
     self.decoder_embedding = nn.Embedding(target_size, d_model)
     self.positional_encoding = PositionalEncoding(d_model, max_seq_length)
@@ -155,10 +166,15 @@ class Transformer(nn.Module):
     tgt_mask = tgt_mask & nopeak_mask
     return src_mask, tgt_mask
 
-  def forward(self, src, tgt):
-    src_mask, tgt_mask = self.generate_mask(src, tgt)
-    src_embedded = self.dropout(self.positional_encoding(self.encoder_embedding(src.int())))
-    tgt_embedded = self.dropout(self.positional_encoding(self.decoder_embedding(tgt.int())))
+  def forward(self, src, tgt, adj):
+    out = self.gcn1(src[0].unsqueeze(-1).float(), adj)
+    out = self.dropout(out)
+    out = self.sigmoid(self.gcn2(out, adj)) # TODO: improve the activation function
+    out = self.dropout(out).squeeze(1).unsqueeze(0).long()
+
+    src_mask, tgt_mask = self.generate_mask(out, tgt)
+    src_embedded = self.dropout(self.positional_encoding(self.encoder_embedding(out)))
+    tgt_embedded = self.dropout(self.positional_encoding(self.decoder_embedding(tgt)))
 
     enc_output = src_embedded
     for enc_layer in self.encoder_layers:

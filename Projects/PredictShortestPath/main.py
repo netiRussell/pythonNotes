@@ -51,7 +51,7 @@ d_ff = 256
 max_seq_length = num_nodes
 dropout = 0.1
 
-transformer = Transformer(src_size, target_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout, num_nodes)
+transformer = Transformer(src_size, target_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout)
 
 # size must be >= than 2nd arg
 # target_size doesn't have to be equaled to src_size
@@ -69,34 +69,19 @@ for epoch in range(1):
     # One epoch
     for cur_batch_index, batch in enumerate(trainLoader):
       # One batch
-
-      # batch.x = batch.x.reshape(-1, 16)
-      
-      # Converting batch into suitable data
-      # x = torch.tensor([])
-      # y = torch.tensor([])
-      # edge_index = torch.tensor([])
-      # for i in range(batch_size):
-      #   x = torch.cat((x, batch[i].x), 1)
-      #   y = torch.cat((y, batch[i].y), 1)
-      #   edge_index = torch.cat((edge_index, batch[i].edge_index), 1)
-      """
-      batch.x must be = [ [[1],[2],[3]], [[1],[2],[3]], [[1],[2],[3]] ] instead of [ [1],[2],[3], [1],[2],[3], [1],[2],[3] ]
-      """
-
       optimizer.zero_grad()
 
       for i in range(len(batch)):
         # One sample
-        x = torch.swapaxes(batch[i].x, 1, 0)
-        y = torch.swapaxes(batch[i].y, 1, 0)
+        x = batch[i].x.permute(1,0)
+        y = batch[i].y.permute(1,0)
 
-        output = transformer(x, y[:, :-1])
+        output = transformer(x, y[:, :-1], batch[i].edge_index)
         loss = criterion(output.contiguous().view(-1, target_size), y[:, 1:].contiguous().view(-1))
         loss.backward()
       
       optimizer.step()
-      print(f"Epoch: {epoch+1}, Loss: {loss.item()}")
+      print(f"Epoch: {epoch+1}, Batch: {cur_batch_index}, Loss: {loss.item()}")
 
 
 # # -- Evaluation --
