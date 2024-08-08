@@ -121,8 +121,8 @@ def generate_dataset(n, num_nodes, imperfect=False):
         # Generating X, and Y ----------------------------------------------------
         # X = nx1 size list of values of each node
         X = [[0]] * num_nodes
-        X[source] = [-1]
-        X[destination] = [1]
+        X[source] = [5]
+        X[destination] = [10]
 
         # Y = nodes to go to to reach destination. Minimum size: 1
         # path is reversed to follow s->d route
@@ -133,8 +133,13 @@ def generate_dataset(n, num_nodes, imperfect=False):
 
 
 # ! Main params - Generate a dataset -----------------------------------------------------------------
-imperfect_dataset = True
-dataset = generate_dataset(10000, num_nodes=16, imperfect=imperfect_dataset)
+"""
+n - number of data samples to be generated
+num_nodes - number of nodes in a grid
+imperfect - bool to make a dataset full of either mixed or perfect samples
+"""
+imperfect_dataset = False
+dataset = generate_dataset(n=10000, num_nodes=16, imperfect=imperfect_dataset)
 
 # Create a DataFrame
 df = pd.DataFrame(dataset, columns=["Edge index", "X", "Y"])

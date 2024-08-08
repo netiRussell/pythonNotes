@@ -8,6 +8,8 @@ from models.Transformer import Transformer
 from visualization import visualize
 from dataset import PredictShortestPathDataset
 
+import sys # TODO: delete after debugging is done
+
 def split_data(dataset, val_ratio, total_samples):
   train_size = int(total_samples * (1.0 - val_ratio))
   validation_size = total_samples - train_size
@@ -40,8 +42,8 @@ visualize(dataset, False)
 n_epochs = 1
 num_nodes = 16 # TODO: make it dynamic
 # TODO: try num_nodes as the size
-src_size = 8 # num of features for input
-target_size = 3 # num of features for output
+src_size = num_nodes # num of features for input
+target_size = num_nodes # num of features for output
 d_model = 64
 num_heads = 8
 num_layers = 6
@@ -54,11 +56,6 @@ transformer = Transformer(src_size, target_size, d_model, num_heads, num_layers,
 # size must be >= than 2nd arg
 # target_size doesn't have to be equaled to src_size
 # different from src size of target is okay
-# TODO: figure out what src_size and target_size should be equal to
-src_data = torch.randint(1, 7, (1, max_seq_length))  # (batch_size, seq_length)
-print(src_data)
-tgt_data = torch.randint(1, 3, (1, max_seq_length-5))  # (batch_size, seq_length)
-print(tgt_data)
 
 # -- Training --
 # TODO: consider using nn.MSELoss()
@@ -68,7 +65,7 @@ optimizer = optim.Adam(transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), e
 transformer.train()
 losses = []
 
-for epoch in range(0):
+for epoch in range(1):
     # One epoch
     for cur_batch_index, batch in enumerate(trainLoader):
       # One batch
@@ -90,14 +87,13 @@ for epoch in range(0):
       optimizer.zero_grad()
 
       for i in range(len(batch)):
-        print("ODIN\n\n")
         # One sample
         x = torch.swapaxes(batch[i].x, 1, 0)
         y = torch.swapaxes(batch[i].y, 1, 0)
 
-      output = transformer(src_data, tgt_data[:, :-1])
-      loss = criterion(output.contiguous().view(-1, target_size), tgt_data[:, 1:].contiguous().view(-1))
-      loss.backward()
+        output = transformer(x, y[:, :-1])
+        loss = criterion(output.contiguous().view(-1, target_size), y[:, 1:].contiguous().view(-1))
+        loss.backward()
       
       optimizer.step()
       print(f"Epoch: {epoch+1}, Loss: {loss.item()}")
