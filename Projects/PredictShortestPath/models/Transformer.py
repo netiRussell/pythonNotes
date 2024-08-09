@@ -9,7 +9,7 @@ class CustomSigmoid(nn.Module):
     super(CustomSigmoid, self).__init__()
 
   def forward(self, x, beta=1):
-    return (1 / ( (len(x)**2)**(-x) ) + 1)
+    return len(x)*torch.sigmoid(x)
   
 
 class MultiHeadAttention(nn.Module):
@@ -169,8 +169,9 @@ class Transformer(nn.Module):
   def forward(self, src, tgt, adj):
     out = self.gcn1(src[0].unsqueeze(-1).float(), adj)
     out = self.dropout(out)
-    out = self.sigmoid(self.gcn2(out, adj)) # TODO: improve the activation function
+    out = self.sigmoid(self.gcn2(out, adj))
     out = self.dropout(out).squeeze(1).unsqueeze(0).long()
+    #print(out)
 
     src_mask, tgt_mask = self.generate_mask(out, tgt)
     src_embedded = self.dropout(self.positional_encoding(self.encoder_embedding(out)))
