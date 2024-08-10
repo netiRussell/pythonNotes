@@ -53,7 +53,7 @@ optimizer = optim.Adam(transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), e
 transformer.train()
 losses = []
 
-for epoch in range(1):
+for epoch in range(2):
     # One epoch
     for cur_batch_index, batch in enumerate(trainLoader):
       # One batch
@@ -64,18 +64,16 @@ for epoch in range(1):
         # One sample
         x = batch[i].x.permute(1,0)
         y = batch[i].y.permute(1,0)
-        #tgt = torch.arange(num_nodes).unsqueeze(0)
 
         output = transformer(x, y[:, :-1], batch[i].edge_index)
-        print(output.contiguous().view(-1, target_size), "\n", y[:, 1:].contiguous().view(-1))
         loss = criterion(output.contiguous().view(-1, target_size), y[:, 1:].contiguous().view(-1))
         loss.backward()
       
       optimizer.step()
       print(f"Epoch: {epoch+1}, Batch: {cur_batch_index}, Loss: {loss.item()}")
-      losses.append(loss.item())
-      break
-    break
+
+      if(cur_batch_index % 20 == 0):
+        losses.append(loss.item())
 
 
 # -- Visualization of loss curve --
@@ -89,14 +87,37 @@ plt.show()
 # -- Evaluation --
 transformer.eval()
 
-# Generate random sample validation data
-val_src_data = torch.randint(1, src_size, (64, max_seq_length))  # (batch_size, seq_length)
-val_tgt_data = torch.randint(1, target_size, (64, max_seq_length))  # (batch_size, seq_length)
-
 with torch.no_grad():
-    val_output = transformer(val_src_data, val_tgt_data[:, :-1])
-    val_loss = criterion(val_output.contiguous().view(-1, target_size), val_tgt_data[:, 1:].contiguous().view(-1))
-    print(f"Validation Loss: {val_loss.item()}")
+  success_rate = []
+  
+  for _, batch in enumerate(validLoader):
+    
+    for i in range(len(batch)):
+      x = batch[i].x.permute(1,0)
+      y = batch[i].y.permute(1,0)
+
+      val_output = transformer(x, y[:, :-1], batch[i].edge_index)
+      y_hat = torch.empty(0)
+      y = y[:, 1:].view(-1)
+
+      # Convert output into a tensor of nodes ids'
+      for elem in val_output[0]:
+        y_hat = torch.cat((y_hat, torch.argmax(elem).unsqueeze(0)), 0)
+
+      # Evaluate:
+      points = 0
+      length = len(y_hat)
+      for i in range(length):
+        if(y_hat[i].item() == y[i].item()):
+          points += 1
+
+      if( length != 0 ):
+        success_rate.append(points / length)
+
+      # print(f"Recieved: {y_hat}")
+      # print(f"Expected: {y}")
+
+  print(f"Success percentage: {sum(success_rate) / len(success_rate) }")
 
 # How come the suze of output = target - 1( because transformer is meant to predict next values)
 # TODO: try to input query
