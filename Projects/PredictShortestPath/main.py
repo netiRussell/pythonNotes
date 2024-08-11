@@ -9,6 +9,8 @@ from visualization import visualize
 from dataset import PredictShortestPathDataset
 import matplotlib.pyplot as plt
 
+import sys # TODO: delete after done with debugging
+
 def split_data(dataset, val_ratio, total_samples):
   train_size = int(total_samples * (1.0 - val_ratio))
   validation_size = total_samples - train_size
@@ -35,19 +37,17 @@ visualize(dataset, False)
 n_epochs = 1
 num_nodes = 16 # TODO: make it dynamic
 src_size = num_nodes # num of features for input
-target_size = num_nodes # num of features for output
+target_size = num_nodes+1 # num of features for output
 d_model = 64
 num_heads = 8
 num_layers = 6
 d_ff = 256
-max_seq_length = num_nodes
+max_seq_length = num_nodes*2+1
 dropout = 0.1
 
 transformer = Transformer(src_size, target_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout)
 
 # -- Training --
-# TODO: consider using nn.MSELoss()
-criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
 
 transformer.train()
@@ -65,9 +65,13 @@ for epoch in range(2):
         x = batch[i].x.permute(1,0)
         y = batch[i].y.permute(1,0)
 
-        output = transformer(x, y[:, :-1], batch[i].edge_index)
-        loss = criterion(output.contiguous().view(-1, target_size), y[:, 1:].contiguous().view(-1))
-        loss.backward()
+        # Another approach:
+        # tgt = torch.zeros(17, dtype=torch.int32).unsqueeze(0)
+        # tgt[0][-1] = 1
+
+        output = transformer(x, y, batch[i].edge_index)
+
+        sys.exit("_______________________")
       
       optimizer.step()
       print(f"Epoch: {epoch+1}, Batch: {cur_batch_index}, Loss: {loss.item()}")
@@ -89,7 +93,7 @@ transformer.eval()
 
 with torch.no_grad():
   success_rate = []
-  
+
   for _, batch in enumerate(validLoader):
     
     for i in range(len(batch)):
@@ -119,6 +123,6 @@ with torch.no_grad():
 
   print(f"Success percentage: {sum(success_rate) / len(success_rate) }")
 
-# How come the suze of output = target - 1( because transformer is meant to predict next values)
-# TODO: try to input query
-# TODO: make evaluation work
+# TODO: Make transformer predict length of an answer
+# TODO: Implement loss function for it
+# TODO: Adapt the evaluation phase 

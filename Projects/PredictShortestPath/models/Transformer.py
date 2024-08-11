@@ -144,6 +144,9 @@ class DecoderLayer(nn.Module):
 class Transformer(nn.Module):
   def __init__(self, src_size, target_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout):
     super(Transformer, self).__init__()
+    self.criterion = nn.CrossEntropyLoss()
+    self.max_seq_length = max_seq_length
+
     self.gcn1 = GCNConv(1, target_size)
     self.gcn2 = GCNConv(target_size, 1)
     self.sigmoid = CustomSigmoid()
@@ -158,32 +161,78 @@ class Transformer(nn.Module):
     self.fc = nn.Linear(d_model, target_size)
     self.dropout = nn.Dropout(dropout)
 
-  def generate_mask(self, src, tgt):
+  def generate_mask_src(self, src):
     src_mask = (src != 0).unsqueeze(1).unsqueeze(2)
+    seq_length = src.size(1)
+    return src_mask
+  
+  def generate_mask_tgt(self, tgt):
     tgt_mask = (tgt != 0).unsqueeze(1).unsqueeze(3)
     seq_length = tgt.size(1)
     nopeak_mask = (1 - torch.triu(torch.ones(1, seq_length, seq_length), diagonal=1)).bool()
     tgt_mask = tgt_mask & nopeak_mask
-    return src_mask, tgt_mask
+    return tgt_mask
 
-  def forward(self, src, tgt, adj):
+  def forward(self, src, y, adj):
+    # GCN
     out = self.gcn1(src[0].unsqueeze(-1).float(), adj)
     out = self.dropout(out)
     out = self.sigmoid(self.gcn2(out, adj))
     out = self.dropout(out).squeeze(1).unsqueeze(0).long()
-    #print(out)
 
-    src_mask, tgt_mask = self.generate_mask(out, tgt)
+    # Encoder
+    src_mask = self.generate_mask_src(out)
     src_embedded = self.dropout(self.positional_encoding(self.encoder_embedding(out)))
-    tgt_embedded = self.dropout(self.positional_encoding(self.decoder_embedding(tgt)))
 
     enc_output = src_embedded
     for enc_layer in self.encoder_layers:
         enc_output = enc_layer(enc_output, src_mask)
+
+    # Decoder
+    # Initial input for Encoder = [ecnoder value + EOS]. EOS = last node id + 1
+    eos_token = len(out[0])
+    tgt = torch.cat((out[0], torch.tensor([eos_token])), 0).unsqueeze(0) 
+    tgt_mask = self.generate_mask_tgt(tgt)
+    tgt_embedded = self.dropout(self.positional_encoding(self.decoder_embedding(tgt)))
 
     dec_output = tgt_embedded
     for dec_layer in self.decoder_layers:
         dec_output = dec_layer(dec_output, enc_output, src_mask, tgt_mask)
 
     output = self.fc(dec_output)
+
+    final_prediction = []
+    for _ in range(len(tgt[0]), self.max_seq_length):
+      # Find next step based on the prediction of the last element
+      new_step = torch.argmax(output[0][-1]).unsqueeze(0)
+
+      # TODO: loss function takes place here
+      # TODO: apply a loss function by comparing each choice for a next step in the sequence
+
+      # EOS is reached => sequence has ended
+      if new_step.item() == eos_token:
+        break
+      
+      # Append new step to keep track of prediction
+      final_prediction.append(new_step.item())
+
+      # New decoder input with a new step added to the current sequence
+      tgt = torch.cat((tgt[0], new_step), 0).unsqueeze(0)
+      
+      # Masks and Positional embeddings calcualted
+      tgt_mask = self.generate_mask_tgt(tgt)
+      tgt_embedded = self.dropout(self.positional_encoding(self.decoder_embedding(tgt)))
+
+      # Values are passed through the decoder
+      dec_output = tgt_embedded
+      for dec_layer in self.decoder_layers:
+          dec_output = dec_layer(dec_output, enc_output, src_mask, tgt_mask)
+
+      # Fully-Connected NN
+      output = self.fc(dec_output)
+
+    print(final_prediction,len(final_prediction))
+
     return output
+
+# Maybe decoder-only transformer is a better choice ?
