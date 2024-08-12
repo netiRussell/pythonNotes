@@ -4,6 +4,8 @@ from torch_geometric.nn import GCNConv
 import torch.nn.functional as F
 import math
 
+import warnings # TODO: delete after debugging is done
+
 class CustomSigmoid(nn.Module):
   def __init__(self):
     super(CustomSigmoid, self).__init__()
@@ -144,7 +146,6 @@ class DecoderLayer(nn.Module):
 class Transformer(nn.Module):
   def __init__(self, src_size, target_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout):
     super(Transformer, self).__init__()
-    self.criterion = nn.CrossEntropyLoss()
     self.max_seq_length = max_seq_length
 
     self.gcn1 = GCNConv(1, target_size)
@@ -173,7 +174,7 @@ class Transformer(nn.Module):
     tgt_mask = tgt_mask & nopeak_mask
     return tgt_mask
 
-  def forward(self, src, y, adj):
+  def forward(self, src, adj):
     # GCN
     out = self.gcn1(src[0].unsqueeze(-1).float(), adj)
     out = self.dropout(out)
@@ -201,20 +202,18 @@ class Transformer(nn.Module):
 
     output = self.fc(dec_output)
 
-    final_prediction = []
-    for _ in range(len(tgt[0]), self.max_seq_length):
+    final_prediction = torch.empty(0)
+    for _ in range(self.max_seq_length-len(tgt[0])):
       # Find next step based on the prediction of the last element
       new_step = torch.argmax(output[0][-1]).unsqueeze(0)
 
-      # TODO: loss function takes place here
-      # TODO: apply a loss function by comparing each choice for a next step in the sequence
+      # Append last element of output to save prediction
+      final_prediction = torch.cat((final_prediction, output[0][-1].unsqueeze(0)), 0)
 
       # EOS is reached => sequence has ended
       if new_step.item() == eos_token:
-        break
-      
-      # Append new step to keep track of prediction
-      final_prediction.append(new_step.item())
+        warnings.warn("Warning...........Message EOS EOSEOSEOSEOS EOS !!!!")
+        return final_prediction
 
       # New decoder input with a new step added to the current sequence
       tgt = torch.cat((tgt[0], new_step), 0).unsqueeze(0)
@@ -230,9 +229,10 @@ class Transformer(nn.Module):
 
       # Fully-Connected NN
       output = self.fc(dec_output)
+      # TODO: add eos at the end if sequence is completely finished and never reached eos on its own
 
-    print(final_prediction,len(final_prediction))
-
-    return output
+    return final_prediction
 
 # Maybe decoder-only transformer is a better choice ?
+# TODO: restructure the for-loop for decoder to keep it efficient 
+# TODO: consider having tgt to have only the steps included

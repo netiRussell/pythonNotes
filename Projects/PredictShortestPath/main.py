@@ -8,6 +8,7 @@ from models.Transformer import Transformer
 from visualization import visualize
 from dataset import PredictShortestPathDataset
 import matplotlib.pyplot as plt
+import math
 
 import sys # TODO: delete after done with debugging
 
@@ -42,12 +43,13 @@ d_model = 64
 num_heads = 8
 num_layers = 6
 d_ff = 256
-max_seq_length = num_nodes*2+1
+max_seq_length = 2*num_nodes+2 # max tgt length
 dropout = 0.1
 
 transformer = Transformer(src_size, target_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout)
 
 # -- Training --
+criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
 
 transformer.train()
@@ -63,15 +65,24 @@ for epoch in range(2):
       for i in range(len(batch)):
         # One sample
         x = batch[i].x.permute(1,0)
-        y = batch[i].y.permute(1,0)
+        y = torch.cat(( batch[i].y.permute(1,0), torch.tensor([[len(batch[i].x)]]) ), 1) # y + eos
 
-        # Another approach:
-        # tgt = torch.zeros(17, dtype=torch.int32).unsqueeze(0)
-        # tgt[0][-1] = 1
+        output = transformer(x, batch[i].edge_index)
+        n_redundant_predicts = len(output) - len(y[0])
 
-        output = transformer(x, y, batch[i].edge_index)
+        # TODO: consider providing y[:, 1:] instead of y as a second argument
+        # TODO: why is output length always = 17
+        # TODO: output starts with 16, is that reflected in the loss function?
+        print(len(output), len(y[0]), n_redundant_predicts)
 
-        sys.exit("_______________________")
+        if( len(output) > len(y[0]) ):
+          loss = criterion(output[:-n_redundant_predicts, :].contiguous(), y.contiguous()[0])
+        elif( len(output) == len(y[0]) ):
+          loss = criterion(output.contiguous(), y.contiguous()[0])
+        else:
+          loss = criterion(output.contiguous(), y.contiguous()[0][:n_redundant_predicts])
+
+        #sys.exit("_______________________")
       
       optimizer.step()
       print(f"Epoch: {epoch+1}, Batch: {cur_batch_index}, Loss: {loss.item()}")
