@@ -3,8 +3,7 @@ import torch.nn as nn
 from torch_geometric.nn import GCNConv
 import torch.nn.functional as F
 import math
-
-import warnings # TODO: delete after debugging is done
+import sys
 
 class CustomSigmoid(nn.Module):
   def __init__(self):
@@ -146,11 +145,15 @@ class DecoderLayer(nn.Module):
 class Transformer(nn.Module):
   def __init__(self, src_size, target_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout):
     super(Transformer, self).__init__()
+    torch.manual_seed(1234567) # TODO: delete after dev phase is done
+
     self.max_seq_length = max_seq_length
 
     self.gcn1 = GCNConv(1, target_size)
-    self.gcn2 = GCNConv(target_size, 1)
-    self.sigmoid = CustomSigmoid()
+    self.gcn2 = GCNConv(target_size, target_size)
+    self.gcn3 = GCNConv(target_size, target_size)
+    self.gcn4 = GCNConv(target_size, 1)
+    self.sigmoidNumNod = CustomSigmoid()
 
     self.encoder_embedding = nn.Embedding(src_size, d_model)
     self.decoder_embedding = nn.Embedding(target_size, d_model)
@@ -178,8 +181,15 @@ class Transformer(nn.Module):
     # GCN
     out = self.gcn1(src[0].unsqueeze(-1).float(), adj)
     out = self.dropout(out)
-    out = self.sigmoid(self.gcn2(out, adj))
-    out = self.dropout(out).squeeze(1).unsqueeze(0).long()
+
+    out = torch.sigmoid(self.gcn2(out, adj))
+    out = self.dropout(out)
+
+    out = torch.relu(self.gcn3(out, adj))
+    out = self.dropout(out)
+
+    out = self.sigmoidNumNod(self.gcn4(out, adj))
+    out = out.squeeze(1).unsqueeze(0).long()
 
     # Encoder
     src_mask = self.generate_mask_src(out)
@@ -190,9 +200,10 @@ class Transformer(nn.Module):
         enc_output = enc_layer(enc_output, src_mask)
 
     # Decoder
-    # Initial input for Encoder = [ecnoder value + EOS]. EOS = last node id + 1
+    # Initial input for Encoder = EOS = last node id + 1
     eos_token = len(out[0])
-    tgt = torch.cat((out[0], torch.tensor([eos_token])), 0).unsqueeze(0) 
+    tgt = torch.tensor([[eos_token]])
+
     tgt_mask = self.generate_mask_tgt(tgt)
     tgt_embedded = self.dropout(self.positional_encoding(self.decoder_embedding(tgt)))
 
@@ -203,7 +214,7 @@ class Transformer(nn.Module):
     output = self.fc(dec_output)
 
     final_prediction = torch.empty(0)
-    for _ in range(self.max_seq_length-len(tgt[0])):
+    for _ in range(self.max_seq_length - 1):
       # Find next step based on the prediction of the last element
       new_step = torch.argmax(output[0][-1]).unsqueeze(0)
 
@@ -211,8 +222,8 @@ class Transformer(nn.Module):
       final_prediction = torch.cat((final_prediction, output[0][-1].unsqueeze(0)), 0)
 
       # EOS is reached => sequence has ended
-      if new_step.item() == eos_token:
-        warnings.warn("Warning...........Message EOS EOSEOSEOSEOS EOS !!!!")
+      if ( new_step.item() == eos_token ):
+        #print("!!!----EOS----!!!")
         return final_prediction
 
       # New decoder input with a new step added to the current sequence
@@ -229,7 +240,6 @@ class Transformer(nn.Module):
 
       # Fully-Connected NN
       output = self.fc(dec_output)
-      # TODO: add eos at the end if sequence is completely finished and never reached eos on its own
 
     return final_prediction
 

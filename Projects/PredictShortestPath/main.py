@@ -8,7 +8,6 @@ from models.Transformer import Transformer
 from visualization import visualize
 from dataset import PredictShortestPathDataset
 import matplotlib.pyplot as plt
-import math
 
 import sys # TODO: delete after done with debugging
 
@@ -43,7 +42,7 @@ d_model = 64
 num_heads = 8
 num_layers = 6
 d_ff = 256
-max_seq_length = 2*num_nodes+2 # max tgt length
+max_seq_length = num_nodes+2 # max tgt length
 dropout = 0.1
 
 transformer = Transformer(src_size, target_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout)
@@ -63,6 +62,9 @@ for epoch in range(2):
       
       loss = None
       for i in range(len(batch)):
+        # TODO: try to understand why transformer always tries to generate the same number
+        # TODO: Sequence stops even though eos is never reached
+
         # One sample
         x = batch[i].x.permute(1,0)
         y = torch.cat(( batch[i].y.permute(1,0), torch.tensor([[len(batch[i].x)]]) ), 1) # y + eos
@@ -70,10 +72,7 @@ for epoch in range(2):
         output = transformer(x, batch[i].edge_index)
         n_redundant_predicts = len(output) - len(y[0])
 
-        # TODO: consider providing y[:, 1:] instead of y as a second argument
-        # TODO: why is output length always = 17
-        # TODO: output starts with 16, is that reflected in the loss function?
-        print(len(output), len(y[0]), n_redundant_predicts)
+        #print(len(output), len(y[0]), n_redundant_predicts)
 
         if( len(output) > len(y[0]) ):
           loss = criterion(output[:-n_redundant_predicts, :].contiguous(), y.contiguous()[0])
