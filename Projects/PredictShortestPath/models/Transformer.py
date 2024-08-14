@@ -149,10 +149,11 @@ class Transformer(nn.Module):
 
     self.max_seq_length = max_seq_length
 
+    # ! Should I have a gradual increase and decrease of node numbers?
+    # num GCN layers = sqrt(n_nodes) - 1
     self.gcn1 = GCNConv(1, target_size)
     self.gcn2 = GCNConv(target_size, target_size)
-    self.gcn3 = GCNConv(target_size, target_size)
-    self.gcn4 = GCNConv(target_size, 1)
+    self.gcn3 = GCNConv(target_size, 1)
     self.sigmoidNumNod = CustomSigmoid()
 
     self.encoder_embedding = nn.Embedding(src_size, d_model)
@@ -179,16 +180,13 @@ class Transformer(nn.Module):
 
   def forward(self, src, adj):
     # GCN
-    out = self.gcn1(src[0].unsqueeze(-1).float(), adj)
+    out = torch.sigmoid(self.gcn1(src[0].unsqueeze(-1).float(), adj))
     out = self.dropout(out)
 
-    out = torch.sigmoid(self.gcn2(out, adj))
+    out = F.leaky_relu(self.gcn2(out, adj))
     out = self.dropout(out)
 
-    out = torch.relu(self.gcn3(out, adj))
-    out = self.dropout(out)
-
-    out = self.sigmoidNumNod(self.gcn4(out, adj))
+    out = self.sigmoidNumNod(self.gcn3(out, adj))
     out = out.squeeze(1).unsqueeze(0).long()
 
     # Encoder

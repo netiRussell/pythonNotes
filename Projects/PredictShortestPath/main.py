@@ -62,8 +62,7 @@ for epoch in range(2):
       
       loss = None
       for i in range(len(batch)):
-        # TODO: try to understand why transformer always tries to generate the same number
-        # TODO: Sequence stops even though eos is never reached
+        # TODO: check on whether optimizer works properly. Maybe gradients are lost along the way?
 
         # One sample
         x = batch[i].x.permute(1,0)
@@ -72,8 +71,7 @@ for epoch in range(2):
         output = transformer(x, batch[i].edge_index)
         n_redundant_predicts = len(output) - len(y[0])
 
-        #print(len(output), len(y[0]), n_redundant_predicts)
-
+        # Based on how different output's and label's lengths are - calculate loss
         if( len(output) > len(y[0]) ):
           loss = criterion(output[:-n_redundant_predicts, :].contiguous(), y.contiguous()[0])
         elif( len(output) == len(y[0]) ):
