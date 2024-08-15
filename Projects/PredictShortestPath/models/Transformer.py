@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch_geometric.nn import GCNConv
 import torch.nn.functional as F
 import math
-import sys
+import sys # TODO: delete after dev phase is done
 
 class CustomSigmoid(nn.Module):
   def __init__(self):
@@ -132,7 +132,7 @@ class DecoderLayer(nn.Module):
     self.dropout = nn.Dropout(dropout)
       
   def forward(self, x, enc_output, src_mask, tgt_mask):
-    attn_output = self.self_attn(x, x, x, tgt_mask)
+    attn_output = self.self_attn(x, x, x, tgt_mask) # TODO: maybe mask is not needed since I have explicitly implemented one
     x = self.norm1(x + self.dropout(attn_output))
     attn_output = self.cross_attn(x, enc_output, enc_output, src_mask)
     x = self.norm2(x + self.dropout(attn_output))
@@ -178,8 +178,13 @@ class Transformer(nn.Module):
     tgt_mask = tgt_mask & nopeak_mask
     return tgt_mask
 
-  def forward(self, src, adj):
-    # GCN
+  def forward(self, src, y, adj, train_status):
+    # TODO: check on how it works, try not applying masks
+    # TODO: check on the progress with greater dataset and more epochs
+    # TODO: if works, adopt the evaluation
+    # TODO: if doesn't work, implement decoder-only transformer
+
+    # -- GCN --
     out = torch.sigmoid(self.gcn1(src[0].unsqueeze(-1).float(), adj))
     out = self.dropout(out)
 
@@ -189,7 +194,7 @@ class Transformer(nn.Module):
     out = self.sigmoidNumNod(self.gcn3(out, adj))
     out = out.squeeze(1).unsqueeze(0).long()
 
-    # Encoder
+    # -- Encoder --
     src_mask = self.generate_mask_src(out)
     src_embedded = self.dropout(self.positional_encoding(self.encoder_embedding(out)))
 
@@ -197,50 +202,46 @@ class Transformer(nn.Module):
     for enc_layer in self.encoder_layers:
         enc_output = enc_layer(enc_output, src_mask)
 
-    # Decoder
+    # -- Decoder --
     # Initial input for Encoder = EOS = last node id + 1
-    eos_token = len(out[0])
+    num_nodes = len(out[0])
+    eos_token = num_nodes
     tgt = torch.tensor([[eos_token]])
-
-    tgt_mask = self.generate_mask_tgt(tgt)
-    tgt_embedded = self.dropout(self.positional_encoding(self.decoder_embedding(tgt)))
-
-    dec_output = tgt_embedded
-    for dec_layer in self.decoder_layers:
-        dec_output = dec_layer(dec_output, enc_output, src_mask, tgt_mask)
-
-    output = self.fc(dec_output)
-
     final_prediction = torch.empty(0)
-    for _ in range(self.max_seq_length - 1):
-      # Find next step based on the prediction of the last element
-      new_step = torch.argmax(output[0][-1]).unsqueeze(0)
 
-      # Append last element of output to save prediction
-      final_prediction = torch.cat((final_prediction, output[0][-1].unsqueeze(0)), 0)
-
-      # EOS is reached => sequence has ended
-      if ( new_step.item() == eos_token ):
-        #print("!!!----EOS----!!!")
-        return final_prediction
-
-      # New decoder input with a new step added to the current sequence
-      tgt = torch.cat((tgt[0], new_step), 0).unsqueeze(0)
-      
+    for i in range(self.max_seq_length-1):
       # Masks and Positional embeddings calcualted
       tgt_mask = self.generate_mask_tgt(tgt)
       tgt_embedded = self.dropout(self.positional_encoding(self.decoder_embedding(tgt)))
 
-      # Values are passed through the decoder
+      # Input is passed through the decoder
       dec_output = tgt_embedded
       for dec_layer in self.decoder_layers:
           dec_output = dec_layer(dec_output, enc_output, src_mask, tgt_mask)
-
-      # Fully-Connected NN
       output = self.fc(dec_output)
 
-    return final_prediction
+      # Find next step based on the prediction of the last element
+      next_step = torch.argmax(output[0][-1]).unsqueeze(0)
 
-# Maybe decoder-only transformer is a better choice ?
-# TODO: restructure the for-loop for decoder to keep it efficient 
-# TODO: consider having tgt to have only the steps included
+      # Append last element of output to save prediction
+      final_prediction = torch.cat([final_prediction, output[0][-1].view(1, num_nodes+1)])
+      
+      # EOS is reached => sequence has ended
+      if ( next_step.item() == eos_token ):
+        return final_prediction
+      
+      # - Teacher Forcing. For training only -
+      # TODO: delete Teacher Forcing after dev phase is done
+      if (train_status == True ):
+        # If transformer wants to continue path prediction even though EOS is reached in the label(y) => force it to stop
+        # There is no need to use last elem from labels in tgt since that elem is an EOS and no prediction of what will go after EOS is needed because nothing is supposed to go after EOS.
+        if( i == len(y[0]) - 1 ):
+          return final_prediction
+
+        # New decoder input defined with a correct next step
+        tgt = torch.cat((tgt[0], y[0][i].view(1)), 0).unsqueeze(0)
+      else:
+        # New decoder input with a new step added to the current sequence
+        tgt = torch.cat((tgt[0], next_step), 0).unsqueeze(0)
+
+    return final_prediction

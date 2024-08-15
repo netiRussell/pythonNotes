@@ -17,7 +17,7 @@ def split_data(dataset, val_ratio, total_samples):
 
   train_dataset, validation_dataset = torch.utils.data.random_split(dataset, [train_size, validation_size])
 
-  trainLoader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
+  trainLoader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False) # TODO: after done with debugging, shuffle = True
   validationLoader = DataLoader(validation_dataset, batch_size=100, shuffle=False)
 
   return trainLoader, validationLoader
@@ -68,7 +68,8 @@ for epoch in range(2):
         x = batch[i].x.permute(1,0)
         y = torch.cat(( batch[i].y.permute(1,0), torch.tensor([[len(batch[i].x)]]) ), 1) # y + eos
 
-        output = transformer(x, batch[i].edge_index)
+        output = transformer(x, y, batch[i].edge_index, train_status=True)
+
         n_redundant_predicts = len(output) - len(y[0])
 
         # Based on how different output's and label's lengths are - calculate loss
@@ -79,7 +80,7 @@ for epoch in range(2):
         else:
           loss = criterion(output.contiguous(), y.contiguous()[0][:n_redundant_predicts])
 
-        #sys.exit("_______________________")
+        loss.backward()
       
       optimizer.step()
       print(f"Epoch: {epoch+1}, Batch: {cur_batch_index}, Loss: {loss.item()}")
