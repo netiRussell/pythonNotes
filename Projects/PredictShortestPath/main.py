@@ -54,7 +54,7 @@ optimizer = optim.Adam(transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), e
 transformer.train()
 losses = []
 
-for epoch in range(2):
+for epoch in range(1):
     # One epoch
     for cur_batch_index, batch in enumerate(trainLoader):
       # One batch
@@ -66,22 +66,14 @@ for epoch in range(2):
 
         # One sample
         x = batch[i].x.permute(1,0)
-        y = torch.cat(( batch[i].y.permute(1,0), torch.tensor([[len(batch[i].x)]]) ), 1) # y + eos
+        y = torch.cat(( batch[i].y.permute(1,0), torch.tensor([[len(batch[i].x)]]) ), 1) # labels + eos
 
         output = transformer(x, y, batch[i].edge_index, train_status=True)
-
-        n_redundant_predicts = len(output) - len(y[0])
-
-        # Based on how different output's and label's lengths are - calculate loss
-        if( len(output) > len(y[0]) ):
-          loss = criterion(output[:-n_redundant_predicts, :].contiguous(), y.contiguous()[0])
-        elif( len(output) == len(y[0]) ):
-          loss = criterion(output.contiguous(), y.contiguous()[0])
-        else:
-          loss = criterion(output.contiguous(), y.contiguous()[0][:n_redundant_predicts])
-
+        
+        # length output = length y; because train_status=True
+        loss = criterion(output.contiguous(), y.contiguous()[0])
         loss.backward()
-      
+
       optimizer.step()
       print(f"Epoch: {epoch+1}, Batch: {cur_batch_index}, Loss: {loss.item()}")
 
@@ -98,39 +90,44 @@ plt.grid(True)
 plt.show()
 
 # -- Evaluation --
+# Logic:
+  # if length output = len(label), then 
+  #   return correct steps / total num of steps
+  # else
+  #   return 0
+  #
+  # (Collect all ratios and divide them by length of all samples) * 100
 transformer.eval()
 
 with torch.no_grad():
   success_rate = []
 
-  for _, batch in enumerate(validLoader):
+  for id_batch, batch in enumerate(validLoader):
     
     for i in range(len(batch)):
       x = batch[i].x.permute(1,0)
-      y = batch[i].y.permute(1,0)
+      y = torch.cat(( batch[i].y.permute(1,0), torch.tensor([[len(batch[i].x)]]) ), 1) # labels + eos
 
-      val_output = transformer(x, y[:, :-1], batch[i].edge_index)
-      y_hat = torch.empty(0)
-      y = y[:, 1:].view(-1)
+      output = transformer(x, y, batch[i].edge_index, train_status=True)
 
-      # Convert output into a tensor of nodes ids'
-      for elem in val_output[0]:
-        y_hat = torch.cat((y_hat, torch.argmax(elem).unsqueeze(0)), 0)
-
-      # Evaluate:
+      # Check if the length of the output is correct
+      if(len(y[0]) != len(output)):
+        success_rate.append(0)
+        continue
+      
+      # Compare elements from output and labels
       points = 0
-      length = len(y_hat)
-      for i in range(length):
-        if(y_hat[i].item() == y[i].item()):
+
+      for i, elem in enumerate(output):
+        if(torch.argmax(elem) == y[0][i]):
           points += 1
 
-      if( length != 0 ):
-        success_rate.append(points / length)
+      # len(y[0]) is never 0 because y = labels + eos
+      success_rate.append(points / len(y[0]))
+    
+    print(f"Evaluation is in the process... Current batch = {id_batch}")
 
-      # print(f"Recieved: {y_hat}")
-      # print(f"Expected: {y}")
-
-  print(f"Success percentage: {sum(success_rate) / len(success_rate) }")
+  print(f"Success percentage: {(sum(success_rate) / len(success_rate)) * 100 }%")
 
 # TODO: Make transformer predict length of an answer
 # TODO: Implement loss function for it

@@ -181,7 +181,9 @@ class Transformer(nn.Module):
   def forward(self, src, y, adj, train_status):
     # TODO: check on how it works, try not applying masks
     # TODO: check on the progress with greater dataset and more epochs
-    # TODO: if works, adopt the evaluation
+    # TODO: if works:
+      # TODO: apply conditional loss function
+      # TODO: apply mixed dataset
     # TODO: if doesn't work, implement decoder-only transformer
 
     # -- GCN --
