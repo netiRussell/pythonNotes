@@ -229,7 +229,8 @@ class Transformer(nn.Module):
       final_prediction = torch.cat([final_prediction, output[0][-1].view(1, num_nodes+1)])
       
       # EOS is reached => sequence has ended
-      if ( next_step.item() == eos_token ):
+      # TODO: delete "and train_status == False" after dev phase is done
+      if ( next_step.item() == eos_token and train_status == False ):
         return final_prediction
       
       # - Teacher Forcing. For training only -

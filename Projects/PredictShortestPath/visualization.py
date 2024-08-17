@@ -2,8 +2,8 @@ from torch_geometric.utils import to_networkx
 import networkx as nx
 import matplotlib.pyplot as plt
 
-def visualize(dataset, status):
-  if status == False:
+def visualize(dataset, num_nodes, run):
+  if run == False:
     return
 
   # Dataset info
@@ -17,5 +17,5 @@ def visualize(dataset, status):
   nx.draw_networkx(G,
                   pos=nx.spring_layout(G, seed=42),
                   with_labels=False)
-  nx.draw_networkx_labels(G,pos=nx.spring_layout(G, seed=42),labels={0:"0", 1:"1", 2:"2", 3:"3", 4:"4", 5:"5", 6:"6", 7:"7", 8:"8", 9:"9", 10:"10", 11:"11", 12:"12", 13:"13", 14:"14", 15:"15"},font_size=14,font_color='black')
+  nx.draw_networkx_labels(G,pos=nx.spring_layout(G, seed=42),labels={i: str(i) for i in range(num_nodes)},font_size=14,font_color='black')
   plt.show()

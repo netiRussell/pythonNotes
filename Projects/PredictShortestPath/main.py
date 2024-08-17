@@ -31,11 +31,11 @@ n_iterations = ceil(total_samples/batch_size)
 trainLoader, validLoader = split_data( dataset=dataset, val_ratio=0.2, total_samples=total_samples)
 
 # -- Visualize a single data sample --
-visualize(dataset, False)
+visualize(dataset, num_nodes=36, run=False)
 
 # -- Hyperparameters --
-n_epochs = 1
-num_nodes = 16 # TODO: make it dynamic
+n_epochs = 10
+num_nodes = 36 # TODO: make it dynamic
 src_size = num_nodes # num of features for input
 target_size = num_nodes+1 # num of features for output
 d_model = 64
@@ -54,7 +54,7 @@ optimizer = optim.Adam(transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), e
 transformer.train()
 losses = []
 
-for epoch in range(1):
+for epoch in range(n_epochs):
     # One epoch
     for cur_batch_index, batch in enumerate(trainLoader):
       # One batch
@@ -62,8 +62,6 @@ for epoch in range(1):
       
       loss = None
       for i in range(len(batch)):
-        # TODO: check on whether optimizer works properly. Maybe gradients are lost along the way?
-
         # One sample
         x = batch[i].x.permute(1,0)
         y = torch.cat(( batch[i].y.permute(1,0), torch.tensor([[len(batch[i].x)]]) ), 1) # labels + eos
@@ -90,13 +88,6 @@ plt.grid(True)
 plt.show()
 
 # -- Evaluation --
-# Logic:
-  # if length output = len(label), then 
-  #   return correct steps / total num of steps
-  # else
-  #   return 0
-  #
-  # (Collect all ratios and divide them by length of all samples) * 100
 transformer.eval()
 
 with torch.no_grad():
@@ -128,7 +119,3 @@ with torch.no_grad():
     print(f"Evaluation is in the process... Current batch = {id_batch}")
 
   print(f"Success percentage: {(sum(success_rate) / len(success_rate)) * 100 }%")
-
-# TODO: Make transformer predict length of an answer
-# TODO: Implement loss function for it
-# TODO: Adapt the evaluation phase 

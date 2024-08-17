@@ -139,7 +139,7 @@ num_nodes - number of nodes in a grid
 imperfect - bool to make a dataset full of either mixed or perfect samples
 """
 imperfect_dataset = False
-dataset = generate_dataset(n=10000, num_nodes=16, imperfect=imperfect_dataset)
+dataset = generate_dataset(n=30000, num_nodes=36, imperfect=imperfect_dataset)
 
 # Create a DataFrame
 df = pd.DataFrame(dataset, columns=["Edge index", "X", "Y"])
