@@ -67,6 +67,7 @@ def generate_dataset(n, num_nodes, imperfect=False):
         sys.exit(f"Number of nodes = {num_nodes} can't form a grid layout")
 
     dataset = []
+    n_imperfect_samples = 0
 
     # Dynamically generating edge_index
     edge_index = [[], []]
@@ -101,45 +102,62 @@ def generate_dataset(n, num_nodes, imperfect=False):
                 edge_index[1].append(current_elem)
 
     for _ in range(n):
-        # Generating random source and destination nodes ---------------------
+        # Generating random source and destination nodes
         source = random.randint(0, num_nodes-1)
         destination = random.randint(0, num_nodes-1)
+
+        # List to store the graph as an adjacency list
+        graph = [[] for _ in range(num_nodes)]
+
+        # Generate graph based on edge_index
+        for i, node in enumerate(edge_index[0]):
+            graph[node].append(edge_index[1][i])
         
-        if(imperfect == False):
-            # Find optimal path --------------------------------------------------
+        if( imperfect ):
+            # Find optimal path and sometimes longer path
+            if( random.random() < 0.15):
+                # Randomly longer path
+                in_between_node = random.randint(0, num_nodes-1)
+                path = get_shortest_distance(graph, source, in_between_node, num_nodes)[::-1]
+                path.extend(get_shortest_distance(graph, in_between_node, destination, num_nodes)[::-1][1:])
 
-            # List to store the graph as an adjacency list
-            graph = [[] for _ in range(num_nodes)]
+                # Y = nodes to go to to reach destination. Minimum size: 1
+                # path is reversed to follow s->d route
+                Y = [path,[1]]
+                n_imperfect_samples += 1
+            else:
+                # Optimal path
+                path = get_shortest_distance(graph, source, destination, num_nodes)
 
-            for i, node in enumerate(edge_index[0]):
-                graph[node].append(edge_index[1][i])
+                # Y = nodes to go to to reach destination. Minimum size: 1
+                # path is reversed to follow s->d route
+                Y = [path[::-1],[0]]
 
-            path = get_shortest_distance(graph, source, destination, num_nodes)
         else:
-            sys.exit("Not implemented just yet")
+            # Find optimal path
+            path = get_shortest_distance(graph, source, destination, num_nodes)
+
+            # Y = nodes to go to to reach destination. Minimum size: 1
+            # path is reversed to follow s->d route
+            Y = [path[::-1],[0]]
         
-        # Generating X, and Y ----------------------------------------------------
         # X = nx1 size list of values of each node
         X = [[0]] * num_nodes
         X[source] = [5]
         X[destination] = [10]
-
-        # Y = nodes to go to to reach destination. Minimum size: 1
-        # path is reversed to follow s->d route
-        Y = path[::-1]
         
         dataset.append([edge_index, X, Y])
-    return dataset
+    return dataset, n_imperfect_samples
 
 
-# ! Main params - Generate a dataset -----------------------------------------------------------------
+# Main params - Generate a dataset -----------------------------------------------------------------
 """
 n - number of data samples to be generated
 num_nodes - number of nodes in a grid
 imperfect - bool to make a dataset full of either mixed or perfect samples
 """
-imperfect_dataset = False
-dataset = generate_dataset(n=30000, num_nodes=36, imperfect=imperfect_dataset)
+imperfect_dataset = True
+dataset, n_imperfect_samples = generate_dataset(n=100000, num_nodes=36, imperfect=imperfect_dataset)
 
 # Create a DataFrame
 df = pd.DataFrame(dataset, columns=["Edge index", "X", "Y"])
@@ -151,3 +169,5 @@ if( imperfect_dataset == True):
 else:
     # Write the DataFrame to an CSV file
     df.to_csv("./data/raw/perfect.csv", index=False)
+
+print(f"Number of imperfect samples: {n_imperfect_samples}")
