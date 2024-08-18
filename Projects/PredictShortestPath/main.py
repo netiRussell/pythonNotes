@@ -23,7 +23,7 @@ def split_data(dataset, val_ratio, total_samples):
   return trainLoader, validationLoader
 
 # -- Data -- 
-batch_size = 25
+batch_size = 50
 dataset = PredictShortestPathDataset(root="./data")
 total_samples = len(dataset)
 n_iterations = ceil(total_samples/batch_size)
@@ -31,7 +31,8 @@ n_iterations = ceil(total_samples/batch_size)
 trainLoader, validLoader = split_data( dataset=dataset, val_ratio=0.2, total_samples=total_samples)
 
 # -- Visualize a single data sample --
-visualize(dataset, num_nodes=36, run=False)
+visualize(dataset, num_nodes=100, run=True)
+sys.exit("___")
 
 # -- Hyperparameters --
 n_epochs = 10

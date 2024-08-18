@@ -15,7 +15,6 @@ def visualize(dataset, num_nodes, run):
   plt.xticks([])
   plt.yticks([])
   nx.draw_networkx(G,
-                  pos=nx.spring_layout(G, seed=42),
-                  with_labels=False)
-  nx.draw_networkx_labels(G,pos=nx.spring_layout(G, seed=42),labels={i: str(i) for i in range(num_nodes)},font_size=14,font_color='black')
+                  pos=nx.bfs_layout(G, 0),
+                  with_labels=True)
   plt.show()

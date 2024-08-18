@@ -11,7 +11,7 @@ class PredictShortestPathDataset(Dataset):
 
   @property
   def raw_file_names(self):
-      return "perfect.csv"
+      return "imperfect.csv"
 
   @property
   def processed_file_names(self):
@@ -34,10 +34,11 @@ class PredictShortestPathDataset(Dataset):
     for index, row in self.df.iterrows():
         # Parameters for a dataset
         X = torch.tensor(ast.literal_eval(row['X']), dtype=torch.long)
-        y = torch.tensor(ast.literal_eval(row['Y']), dtype=torch.long).unsqueeze(1)
+        y = torch.tensor(ast.literal_eval(row['Y'])[0], dtype=torch.long).unsqueeze(1)
+        imperfect_y_flag = torch.tensor(ast.literal_eval(row['Y'])[1], dtype=torch.long).unsqueeze(1)
         edge_index = torch.tensor(ast.literal_eval(row['Edge index']), dtype=torch.long)
         
-        data = Data(x=X, edge_index=edge_index, y=y, num_nodes=len(X))
+        data = Data(x=X, edge_index=edge_index, y=y, imperfect_y_flag=imperfect_y_flag, num_nodes=len(X))
 
         torch.save(data, osp.join(self.processed_dir, f'data_{idx}.pt'))
         idx += 1
