@@ -31,18 +31,17 @@ n_iterations = ceil(total_samples/batch_size)
 trainLoader, validLoader = split_data( dataset=dataset, val_ratio=0.2, total_samples=total_samples)
 
 # -- Visualize a single data sample --
-visualize(dataset, num_nodes=100, run=True)
-sys.exit("___")
+visualize(dataset, num_nodes=100, run=False)
 
 # -- Hyperparameters --
-n_epochs = 10
-num_nodes = 36 # TODO: make it dynamic
+n_epochs = 8
+num_nodes = 100 # TODO: make it dynamic(option: through dataset.py as a param of PredictShortestPathDataset)
 src_size = num_nodes # num of features for input
 target_size = num_nodes+1 # num of features for output
-d_model = 64
+d_model = 256
 num_heads = 8
 num_layers = 6
-d_ff = 256
+d_ff = 1024
 max_seq_length = num_nodes+2 # max tgt length
 dropout = 0.1
 
@@ -60,18 +59,25 @@ for epoch in range(n_epochs):
     for cur_batch_index, batch in enumerate(trainLoader):
       # One batch
       optimizer.zero_grad()
+      temp_losses = []
       
       loss = None
       for i in range(len(batch)):
         # One sample
         x = batch[i].x.permute(1,0)
         y = torch.cat(( batch[i].y.permute(1,0), torch.tensor([[len(batch[i].x)]]) ), 1) # labels + eos
+        y_flag = batch[i].imperfect_y_flag.item()
 
         output = transformer(x, y, batch[i].edge_index, train_status=True)
         
         # length output = length y; because train_status=True
-        loss = criterion(output.contiguous(), y.contiguous()[0])
+        if(y_flag == 0):
+          loss = criterion(output.contiguous(), y.contiguous()[0])
+        else:
+          loss = 0.2*criterion(output.contiguous(), y.contiguous()[0])
+
         loss.backward()
+        temp_losses.append(loss.item())
 
       optimizer.step()
       print(f"Epoch: {epoch+1}, Batch: {cur_batch_index}, Loss: {loss.item()}")
@@ -81,9 +87,10 @@ for epoch in range(n_epochs):
 
 
 # -- Visualization of loss curve --
+# TODO: change visualization and move it to a seperate file. Append a batch of samples, find avg and then append that avg to the final losses
 plt.plot(range(1, len(losses) + 1), losses, marker='o')
 plt.title('Training Loss Curve')
-plt.xlabel('Epoch')
+plt.xlabel('Batches')
 plt.ylabel('Loss')
 plt.grid(True)
 plt.show()
@@ -99,6 +106,9 @@ with torch.no_grad():
     for i in range(len(batch)):
       x = batch[i].x.permute(1,0)
       y = torch.cat(( batch[i].y.permute(1,0), torch.tensor([[len(batch[i].x)]]) ), 1) # labels + eos
+
+      # TODO: if y_flag == 1 => disregard this sample 
+      # TODO: implement fully correct criteria
 
       output = transformer(x, y, batch[i].edge_index, train_status=True)
 
@@ -120,3 +130,5 @@ with torch.no_grad():
     print(f"Evaluation is in the process... Current batch = {id_batch}")
 
   print(f"Success percentage: {(sum(success_rate) / len(success_rate)) * 100 }%")
+
+# TODO: save gradients to a file after done with training
