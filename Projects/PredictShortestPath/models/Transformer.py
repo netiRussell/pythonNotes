@@ -153,7 +153,13 @@ class Transformer(nn.Module):
     # num GCN layers = sqrt(n_nodes) - 1
     self.gcn1 = GCNConv(1, target_size)
     self.gcn2 = GCNConv(target_size, target_size)
-    self.gcn3 = GCNConv(target_size, 1)
+    self.gcn3 = GCNConv(target_size, target_size)
+    self.gcn4 = GCNConv(target_size, target_size)
+    self.gcn5 = GCNConv(target_size, target_size)
+    self.gcn6 = GCNConv(target_size, target_size)
+    self.gcn7 = GCNConv(target_size, target_size/2)
+    self.gcn8 = GCNConv(target_size/2, target_size/4)
+    self.gcn9 = GCNConv(target_size/4, 1)
     self.sigmoidNumNod = CustomSigmoid()
 
     self.encoder_embedding = nn.Embedding(src_size, d_model)
@@ -179,12 +185,10 @@ class Transformer(nn.Module):
     return tgt_mask
 
   def forward(self, src, y, adj, train_status):
-    # TODO: check on how it works, try not applying masks
     # TODO: check on the progress with greater dataset and more epochs
+    # TODO: Try not applying masks
     # TODO: if works:
       # TODO: apply conditional loss function
-      # TODO: apply mixed dataset
-    # TODO: if doesn't work, implement decoder-only transformer
 
     # -- GCN --
     out = torch.sigmoid(self.gcn1(src[0].unsqueeze(-1).float(), adj))
@@ -193,7 +197,25 @@ class Transformer(nn.Module):
     out = F.leaky_relu(self.gcn2(out, adj))
     out = self.dropout(out)
 
-    out = self.sigmoidNumNod(self.gcn3(out, adj))
+    out = F.relu(self.gcn3(out, adj))
+    out = self.dropout(out)
+
+    out = F.relu(self.gcn4(out, adj))
+    out = self.dropout(out)
+
+    out = F.relu(self.gcn5(out, adj))
+    out = self.dropout(out)
+
+    out = F.relu(self.gcn6(out, adj))
+    out = self.dropout(out)
+
+    out = F.relu(self.gcn7(out, adj))
+    out = self.dropout(out)
+
+    out = F.relu(self.gcn8(out, adj))
+    out = self.dropout(out)
+
+    out = self.sigmoidNumNod(self.gcn9(out, adj))
     out = out.squeeze(1).unsqueeze(0).long()
 
     # -- Encoder --

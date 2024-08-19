@@ -23,13 +23,17 @@ def split_data(dataset, val_ratio, total_samples):
 
   return trainLoader, validationLoader
 
-def save_checkpoint(state, filename='./savedGrads/checkpoint.pth.tar'):
-    if os.path.isfile(filename):
-        os.remove(filename)
-    torch.save(state, filename)
+
+def save_checkpoint(state, path='./savedGrads/checkpoint.pth.tar'):
+    # Overwrite prev saving
+    if os.path.isfile(path):
+        os.remove(path)
+    
+    torch.save(state, path)
 
 # -- Data -- 
-batch_size = 50
+# TODO: set batch_size and n_epochs, start the training
+batch_size = 100
 dataset = PredictShortestPathDataset(root="./data")
 total_samples = len(dataset)
 n_iterations = ceil(total_samples/batch_size)
@@ -40,7 +44,7 @@ trainLoader, validLoader = split_data( dataset=dataset, val_ratio=0.2, total_sam
 visualizeGraph(dataset, num_nodes=100, run=False)
 
 # -- Hyperparameters --
-n_epochs = 8
+n_epochs = 3
 num_nodes = 100 # TODO: make it dynamic(option: through dataset.py as a param of PredictShortestPathDataset)
 src_size = num_nodes # num of features for input
 target_size = num_nodes+1 # num of features for output
@@ -51,11 +55,16 @@ d_ff = 1024
 max_seq_length = num_nodes+2 # max tgt length
 dropout = 0.1
 
-transformer = Transformer(src_size, target_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout)
-
 # -- Training --
+transformer = Transformer(src_size, target_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
+
+# -- Load model & optimizer --
+# checkpoint = torch.load(PATH)
+# transformer.load_state_dict(checkpoint['model_state_dict'])
+# optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+# epoch = checkpoint['epoch']
 
 transformer.train()
 losses = []
@@ -85,7 +94,7 @@ for epoch in range(n_epochs):
           loss = 0.15*loss
 
         loss.backward()
-
+      
       optimizer.step()
       print(f"Epoch: {epoch+1}, Batch: {cur_batch_index}, Loss: {loss.item()}")
 
@@ -93,10 +102,10 @@ for epoch in range(n_epochs):
 
 # Save progress
 save_checkpoint({
-    'epoch': (epoch + 1),
-    'state_dict': transformer.state_dict(),
-    'optimizer': optimizer.state_dict(),
-})
+            'epoch': n_epochs,
+            'model_state_dict': transformer.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            })
 
 # -- Visualization of loss curve --
 visualizeLoss(losses, run=True)
@@ -143,5 +152,4 @@ with torch.no_grad():
   print(f"Success percentage (length is correct but not all elements must be the same): {(sum(success_rate) / len(success_rate)) * 100 }%")
   print(f"Complete success percentage (length and all elements are correct): {(sum(success_rate) / len(success_rate)) * 100 }%")
 
-# TODO: make sure visualizeLoss works correctly
-# TODO: make sure evaluation with complete success perc. works correctly
+  # TODO: make sure the saving is correctly implemented

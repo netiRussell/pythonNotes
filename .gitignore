@@ -6,3 +6,4 @@ Projects/PredictShortestPath/data/raw/imperfect.csv
 Projects/PredictShortestPath/__pycache__
 Projects/PredictShortestPath/models/__pycache__
 Projects/PredictShortestPath/data/processed
+Projects/PredictShortestPath/savedGrads/checkpoint.pth.tar
