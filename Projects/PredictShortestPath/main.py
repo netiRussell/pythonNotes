@@ -8,6 +8,7 @@ from models.Transformer import Transformer
 from visualization import visualizeGraph, visualizeLoss
 from dataset import PredictShortestPathDataset
 import matplotlib.pyplot as plt
+import os
 
 import sys # TODO: delete after done with debugging
 
@@ -21,6 +22,11 @@ def split_data(dataset, val_ratio, total_samples):
   validationLoader = DataLoader(validation_dataset, batch_size=100, shuffle=False)
 
   return trainLoader, validationLoader
+
+def save_checkpoint(state, filename='./savedGrads/checkpoint.pth.tar'):
+    if os.path.isfile(filename):
+        os.remove(filename)
+    torch.save(state, filename)
 
 # -- Data -- 
 batch_size = 50
@@ -85,9 +91,14 @@ for epoch in range(n_epochs):
 
       losses.append((sum(temp_losses) / len(temp_losses)))
 
+# Save progress
+save_checkpoint({
+    'epoch': (epoch + 1),
+    'state_dict': transformer.state_dict(),
+    'optimizer': optimizer.state_dict(),
+})
 
 # -- Visualization of loss curve --
-# TODO: make sure works correctly
 visualizeLoss(losses, run=True)
 
 # -- Evaluation --
@@ -95,21 +106,25 @@ transformer.eval()
 
 with torch.no_grad():
   success_rate = []
+  complete_success_rate = []
 
   for id_batch, batch in enumerate(validLoader):
     
     for i in range(len(batch)):
       x = batch[i].x.permute(1,0)
       y = torch.cat(( batch[i].y.permute(1,0), torch.tensor([[len(batch[i].x)]]) ), 1) # labels + eos
+      y_flag = batch[i].imperfect_y_flag.item()
 
-      # TODO: if y_flag == 1 => disregard this sample 
-      # TODO: implement fully correct criteria
+      # Imperfect sample; to be disregarded
+      if( y_flag == 1 ):
+        continue
 
       output = transformer(x, y, batch[i].edge_index, train_status=True)
 
       # Check if the length of the output is correct
       if(len(y[0]) != len(output)):
         success_rate.append(0)
+        complete_success_rate.append(0)
         continue
       
       # Compare elements from output and labels
@@ -121,9 +136,12 @@ with torch.no_grad():
 
       # len(y[0]) is never 0 because y = labels + eos
       success_rate.append(points / len(y[0]))
+      complete_success_rate.append(int(points / len(y[0])))
     
     print(f"Evaluation is in the process... Current batch = {id_batch}")
 
-  print(f"Success percentage: {(sum(success_rate) / len(success_rate)) * 100 }%")
+  print(f"Success percentage (length is correct but not all elements must be the same): {(sum(success_rate) / len(success_rate)) * 100 }%")
+  print(f"Complete success percentage (length and all elements are correct): {(sum(success_rate) / len(success_rate)) * 100 }%")
 
-# TODO: save gradients to a file after done with training
+# TODO: make sure visualizeLoss works correctly
+# TODO: make sure evaluation with complete success perc. works correctly
