@@ -5,7 +5,7 @@ from torch.utils.data import BatchSampler
 from torch_geometric.loader import DataLoader
 from math import ceil
 from models.Transformer import Transformer
-from visualization import visualize
+from visualization import visualizeGraph, visualizeLoss
 from dataset import PredictShortestPathDataset
 import matplotlib.pyplot as plt
 
@@ -31,7 +31,7 @@ n_iterations = ceil(total_samples/batch_size)
 trainLoader, validLoader = split_data( dataset=dataset, val_ratio=0.2, total_samples=total_samples)
 
 # -- Visualize a single data sample --
-visualize(dataset, num_nodes=100, run=False)
+visualizeGraph(dataset, num_nodes=100, run=False)
 
 # -- Hyperparameters --
 n_epochs = 8
@@ -71,29 +71,24 @@ for epoch in range(n_epochs):
         output = transformer(x, y, batch[i].edge_index, train_status=True)
         
         # length output = length y; because train_status=True
-        if(y_flag == 0):
-          loss = criterion(output.contiguous(), y.contiguous()[0])
-        else:
-          loss = 0.2*criterion(output.contiguous(), y.contiguous()[0])
+        loss = criterion(output.contiguous(), y.contiguous()[0])
+        temp_losses.append(loss.item())
+
+        # Imperfect sample case
+        if(y_flag == 1):
+          loss = 0.15*loss
 
         loss.backward()
-        temp_losses.append(loss.item())
 
       optimizer.step()
       print(f"Epoch: {epoch+1}, Batch: {cur_batch_index}, Loss: {loss.item()}")
 
-      if(cur_batch_index % 20 == 0):
-        losses.append(loss.item())
+      losses.append((sum(temp_losses) / len(temp_losses)))
 
 
 # -- Visualization of loss curve --
-# TODO: change visualization and move it to a seperate file. Append a batch of samples, find avg and then append that avg to the final losses
-plt.plot(range(1, len(losses) + 1), losses, marker='o')
-plt.title('Training Loss Curve')
-plt.xlabel('Batches')
-plt.ylabel('Loss')
-plt.grid(True)
-plt.show()
+# TODO: make sure works correctly
+visualizeLoss(losses, run=True)
 
 # -- Evaluation --
 transformer.eval()

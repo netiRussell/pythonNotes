@@ -2,7 +2,7 @@ from torch_geometric.utils import to_networkx
 import networkx as nx
 import matplotlib.pyplot as plt
 
-def visualize(dataset, num_nodes, run):
+def visualizeGraph(dataset, num_nodes, run):
   if run == False:
     return
 
@@ -17,4 +17,16 @@ def visualize(dataset, num_nodes, run):
   nx.draw_networkx(G,
                   pos=nx.bfs_layout(G, 0),
                   with_labels=True)
+  plt.show()
+
+
+def visualizeLoss(losses, run):
+  if run == False:
+    return
+  
+  plt.plot(range(1, len(losses) + 1), losses, marker='o')
+  plt.title('Training Loss Curve')
+  plt.xlabel('Avg per batch')
+  plt.ylabel('Loss')
+  plt.grid(True)
   plt.show()
