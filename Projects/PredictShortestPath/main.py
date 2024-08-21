@@ -32,7 +32,8 @@ def save_checkpoint(state, path='./savedGrads/checkpoint.pth.tar'):
     torch.save(state, path)
 
 # -- Data -- 
-# TODO: set batch_size and n_epochs, start the training
+# ! TODO: Switch to GPU for the remote training
+# ! TODO: improve the model
 batch_size = 100
 dataset = PredictShortestPathDataset(root="./data")
 total_samples = len(dataset)
@@ -151,5 +152,3 @@ with torch.no_grad():
 
   print(f"Success percentage (length is correct but not all elements must be the same): {(sum(success_rate) / len(success_rate)) * 100 }%")
   print(f"Complete success percentage (length and all elements are correct): {(sum(success_rate) / len(success_rate)) * 100 }%")
-
-  # TODO: make sure the saving is correctly implemented

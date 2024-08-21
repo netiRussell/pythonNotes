@@ -185,11 +185,6 @@ class Transformer(nn.Module):
     return tgt_mask
 
   def forward(self, src, y, adj, train_status):
-    # TODO: check on the progress with greater dataset and more epochs
-    # TODO: Try not applying masks
-    # TODO: if works:
-      # TODO: apply conditional loss function
-
     # -- GCN --
     out = torch.sigmoid(self.gcn1(src[0].unsqueeze(-1).float(), adj))
     out = self.dropout(out)
