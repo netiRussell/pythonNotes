@@ -157,9 +157,9 @@ class Transformer(nn.Module):
     self.gcn4 = GCNConv(target_size, target_size)
     self.gcn5 = GCNConv(target_size, target_size)
     self.gcn6 = GCNConv(target_size, target_size)
-    self.gcn7 = GCNConv(target_size, target_size/2)
-    self.gcn8 = GCNConv(target_size/2, target_size/4)
-    self.gcn9 = GCNConv(target_size/4, 1)
+    self.gcn7 = GCNConv(target_size, int(target_size/2))
+    self.gcn8 = GCNConv(int(target_size/2), int(target_size/4))
+    self.gcn9 = GCNConv(int(target_size/4), 1)
     self.sigmoidNumNod = CustomSigmoid()
 
     self.encoder_embedding = nn.Embedding(src_size, d_model)
