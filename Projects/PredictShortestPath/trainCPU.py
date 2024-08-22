@@ -5,7 +5,7 @@ from math import ceil
 from models.Transformer import Transformer
 from visualization import visualizeGraph, visualizeLoss
 from data.dataset import PredictShortestPathDataset
-from functions import split_data, save_checkpoint
+from functions import prepare_data, save_checkpoint
 import matplotlib.pyplot as plt
 import os
 
@@ -35,14 +35,14 @@ dropout = 0.1
 # -- Data -- 
 dataset = PredictShortestPathDataset(root="./data")
 total_samples = len(dataset)
-n_iterations = ceil(total_samples/batch_size)
 
-trainLoader, validLoader = split_data( dataset=dataset, val_ratio=0.2, total_samples=total_samples, batch_size=batch_size)
+trainLoader, validLoader = prepare_data( dataset=dataset, batch_size=batch_size, valid_percantage=0.3)
 
 # -- Visualize a single data sample --
 visualizeGraph(dataset, num_nodes=100, run=False)
 
 # -- Training --
+# ! TODO: consider re-randomizing/re-shuffling dataset every epoch
 transformer = Transformer(src_size, target_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
