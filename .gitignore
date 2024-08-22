@@ -3,6 +3,7 @@
 CNNcourse/W1A1/
 RL/Bandits
 Projects/PredictShortestPath/data/raw/imperfect.csv
+Projects/PredictShortestPath/data/raw/perfect.csv
 Projects/PredictShortestPath/__pycache__
 Projects/PredictShortestPath/models/__pycache__
 Projects/PredictShortestPath/data/processed
