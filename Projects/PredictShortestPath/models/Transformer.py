@@ -186,7 +186,7 @@ class Transformer(nn.Module):
 
   def forward(self, src, y, adj, train_status):
     # -- GCN --
-    out = torch.sigmoid(self.gcn1(src[0].unsqueeze(-1).float(), adj))
+    out = self.gcn1(src[0].unsqueeze(-1).float(), adj)
     out = self.dropout(out)
 
     out = F.leaky_relu(self.gcn2(out, adj))
@@ -198,7 +198,7 @@ class Transformer(nn.Module):
     out = F.relu(self.gcn4(out, adj))
     out = self.dropout(out)
 
-    out = F.relu(self.gcn5(out, adj))
+    out = torch.sigmoid((self.gcn5(out, adj)))
     out = self.dropout(out)
 
     out = F.relu(self.gcn6(out, adj))

@@ -43,14 +43,15 @@ trainLoader, validLoader = prepare_data( dataset=dataset, batch_size=batch_size,
 visualizeGraph(dataset, num_nodes=100, run=False)
 
 # -- Defining environment --
+# ! TODO: Maybe there is a problem with masks. Maybe I should use the official code and start over from there
+# ! TODO: consider changing learning rate over time
 # ! TODO: consider re-randomizing/re-shuffling dataset every epoch
-# ! TODO: consider generating a dataset with multiple optimal paths
 transformer = Transformer(src_size, target_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
 
 # -- Load model & optimizer --
-if ( True ):
+if ( False ):
   checkpoint = torch.load('./savedGrads/checkpoint.pth.tar')
   transformer.load_state_dict(checkpoint['model_state_dict'])
   optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
