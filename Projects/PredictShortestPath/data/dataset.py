@@ -11,7 +11,7 @@ class PredictShortestPathDataset(Dataset):
 
   @property
   def raw_file_names(self):
-      return "imperfect.csv"
+      return "perfect.csv"
 
   @property
   def processed_file_names(self):

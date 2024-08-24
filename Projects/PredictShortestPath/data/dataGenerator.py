@@ -161,6 +161,7 @@ def generate_dataset( num_nodes, imperfect=False):
 num_nodes - number of nodes in a grid
 imperfect - bool to make a dataset full of either mixed or perfect samples
 """
+# If changing imperfect_dataset - Make sure "raw_file_names()" returns correct file in dataset.py
 imperfect_dataset = False
 dataset, n_imperfect_samples = generate_dataset(num_nodes=100, imperfect=imperfect_dataset)
 

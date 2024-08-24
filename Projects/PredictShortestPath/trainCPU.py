@@ -11,6 +11,7 @@ import os
 
 import sys # TODO: delete after done with debugging
 
+# ! TODO: implement GPU
 # if torch.cuda.is_available():
 #     print(f"GPU: {torch.cuda.get_device_name(0)} is available.")
 # else:
@@ -19,7 +20,7 @@ import sys # TODO: delete after done with debugging
 # sys.exit("___")
 
 # -- Hyperparameters --
-n_epochs = 4
+n_epochs = 10
 batch_size = 50
 num_nodes = 100 # TODO: make it dynamic(option: through dataset.py as a param of PredictShortestPathDataset)
 src_size = num_nodes # num of features for input
@@ -41,18 +42,24 @@ trainLoader, validLoader = prepare_data( dataset=dataset, batch_size=batch_size,
 # -- Visualize a single data sample --
 visualizeGraph(dataset, num_nodes=100, run=False)
 
-# -- Training --
+# -- Defining environment --
 # ! TODO: consider re-randomizing/re-shuffling dataset every epoch
+# ! TODO: consider generating a dataset with multiple optimal paths
 transformer = Transformer(src_size, target_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
 
 # -- Load model & optimizer --
-# checkpoint = torch.load(PATH)
-# transformer.load_state_dict(checkpoint['model_state_dict'])
-# optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-# epoch = checkpoint['epoch']
+if ( True ):
+  checkpoint = torch.load('./savedGrads/checkpoint.pth.tar')
+  transformer.load_state_dict(checkpoint['model_state_dict'])
+  optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+  prev_n_epochs = checkpoint['epoch']
 
+  print(f'Training is resumed! Starting from epoch #{prev_n_epochs}')
+
+
+# -- Training --
 transformer.train()
 losses = []
 
@@ -88,11 +95,15 @@ for epoch in range(n_epochs):
     losses.append((sum(temp_losses) / len(temp_losses)))
 
 # -- Save progress of training --
+if('prev_n_epochs' in locals()):
+  n_epochs += prev_n_epochs
+
 save_checkpoint({
             'epoch': n_epochs,
             'model_state_dict': transformer.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             })
+print(f'The model has been saved at {n_epochs} epochs')
 
 # -- Visualization of loss curve --
 visualizeLoss(losses, run=True)
@@ -137,4 +148,4 @@ with torch.no_grad():
     print(f"Evaluation is in the process... Current batch = {id_batch}")
 
   print(f"Success percentage (length is correct but not all elements must be the same): {(sum(success_rate) / len(success_rate)) * 100 }%")
-  print(f"Complete success percentage (length and all elements are correct): {(sum(success_rate) / len(success_rate)) * 100 }%")
+  print(f"Complete success percentage (length and all elements are correct): {(sum(complete_success_rate) / len(complete_success_rate)) * 100 }%")
